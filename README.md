@@ -1,9 +1,11 @@
 
-# Restaurant-Order-Processing-System
-=======
 # Restaurant Order Processing System
 
 A two-application restaurant service system. The React/Vite client talks to a Spring Boot REST API backed by MySQL. It includes staff-only account creation, six role-based workspaces, a customer menu and cart, the kitchen-to-floor order workflow, checkout, sales reporting, and menu administration.
+
+## Audit summary
+
+The current codebase is functionally complete and build-verified in its present state. The main issues identified during audit were environmental rather than architectural: missing runtime environment variables for MySQL, JWT, and the initial admin bootstrap; a few documentation inconsistencies; and the need to keep database credentials outside source control. No destructive reset or major rewrite was required.
 
 ## Prerequisites
 
