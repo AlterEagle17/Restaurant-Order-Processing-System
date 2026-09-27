@@ -5,6 +5,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -48,13 +50,15 @@ public class AdminUserController {
 	}
 
 	@PatchMapping("/{id}/status")
-	public UserResponse updateStatus(@PathVariable UUID id, @Valid @RequestBody StatusUpdateRequest request) {
-		return adminUserService.updateStatus(id, request.active());
+	public UserResponse updateStatus(@PathVariable UUID id, @Valid @RequestBody StatusUpdateRequest request,
+			@AuthenticationPrincipal UserDetails actor) {
+		return adminUserService.updateStatus(id, request.active(), actor.getUsername());
 	}
 
 	@PatchMapping("/{id}/role")
-	public UserResponse updateRole(@PathVariable UUID id, @Valid @RequestBody RoleUpdateRequest request) {
-		return adminUserService.updateRole(id, request.role());
+	public UserResponse updateRole(@PathVariable UUID id, @Valid @RequestBody RoleUpdateRequest request,
+			@AuthenticationPrincipal UserDetails actor) {
+		return adminUserService.updateRole(id, request.role(), actor.getUsername());
 	}
 
 	@PatchMapping("/{id}/password")

@@ -45,15 +45,23 @@ public class AdminUserService {
 	}
 
 	@Transactional
-	public UserResponse updateStatus(UUID id, boolean active) {
+	public UserResponse updateStatus(UUID id, boolean active, String actorUsername) {
 		UserAccount user = requireUser(id);
+		if (!active) {
+			preventSelfLockout(user, actorUsername);
+			preventLastAdministrator(user);
+		}
 		user.setActive(active);
 		return UserResponse.from(user);
 	}
 
 	@Transactional
-	public UserResponse updateRole(UUID id, Role role) {
+	public UserResponse updateRole(UUID id, Role role, String actorUsername) {
 		UserAccount user = requireUser(id);
+		if (role != Role.ADMIN) {
+			preventSelfLockout(user, actorUsername);
+			preventLastAdministrator(user);
+		}
 		user.setRole(role);
 		return UserResponse.from(user);
 	}
@@ -71,6 +79,18 @@ public class AdminUserService {
 		userRepository.findByUsernameIgnoreCase(normalizeUsername(username)).ifPresent(existing -> {
 			if (!existing.getId().equals(currentId)) throw new ConflictException("Username is already in use");
 		});
+	}
+
+	private void preventSelfLockout(UserAccount target, String actorUsername) {
+		if (target.getUsername().equalsIgnoreCase(actorUsername)) {
+			throw new ConflictException("You cannot deactivate or demote your own administrator account");
+		}
+	}
+
+	private void preventLastAdministrator(UserAccount target) {
+		if (target.getRole() == Role.ADMIN && target.isActive() && userRepository.countByRoleAndActiveTrue(Role.ADMIN) <= 1) {
+			throw new ConflictException("At least one active administrator must remain");
+		}
 	}
 
 	private String normalizeUsername(String username) { return username.trim().toLowerCase(Locale.ROOT); }

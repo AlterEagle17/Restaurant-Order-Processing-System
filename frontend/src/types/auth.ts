@@ -33,3 +33,14 @@ export const ROLE_HOME: Record<UserRole, string> = {
   KITCHEN_STAFF: '/kitchen',
   CUSTOMER: '/customer',
 }
+
+export interface CurrentUserResponse extends AuthUser {
+  active: boolean
+}
+
+export interface LoginResponse {
+  accessToken: string
+  tokenType: 'Bearer'
+  expiresIn: number
+  user: AuthUser
+}

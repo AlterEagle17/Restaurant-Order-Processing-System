@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.ZoneOffset;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
 import com.restaurant.backend.menu.MenuCategory;
@@ -117,6 +119,10 @@ class RestaurantApiIntegrationTests {
 				.andExpect(jsonPath("$.paymentStatus").value("PENDING"))
 				.andReturn();
 		String orderId = readField(created, "id");
+		menuItem.update("Renamed pasta", "Updated menu label", category, menuItem.getPrice(), null);
+		itemRepository.save(menuItem);
+		mockMvc.perform(get("/api/orders/{id}", orderId).header("Authorization", bearer(customerToken)))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items[0].name").value("Pasta"));
 		mockMvc.perform(patch("/api/kitchen/orders/{id}/status", orderId)
 				.header("Authorization", bearer(kitchenToken)).contentType(MediaType.APPLICATION_JSON)
 				.content("{\"status\":\"READY\"}"))
@@ -146,6 +152,9 @@ class RestaurantApiIntegrationTests {
 		mockMvc.perform(payment)
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.error").value("CONFLICT"));
+		var storedOrder = orderRepository.findById(java.util.UUID.fromString(orderId)).orElseThrow();
+		ReflectionTestUtils.setField(storedOrder, "createdAt", Instant.now().minusSeconds(172800));
+		orderRepository.saveAndFlush(storedOrder);
 
 		String date = LocalDate.now(ZoneOffset.UTC).toString();
 		mockMvc.perform(get("/api/manager/dashboard").param("date", date)
@@ -158,12 +167,24 @@ class RestaurantApiIntegrationTests {
 				.header("Authorization", bearer(managerToken)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.points[0].revenue").value(25.0));
+		mockMvc.perform(get("/api/manager/dashboard").param("date", LocalDate.now(ZoneOffset.UTC).minusDays(2).toString())
+				.header("Authorization", bearer(managerToken)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalRevenue").value(0.0));
 	}
 
 	@Test
 	void adminCanManageUsersAndCatalogWithoutReturningPasswordHashes() throws Exception {
-		createUser("admin", Role.ADMIN);
+		UserAccount admin = createUser("admin", Role.ADMIN);
 		String adminToken = login("admin");
+		mockMvc.perform(patch("/api/admin/users/{id}/status", admin.getId())
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"active\":false}"))
+				.andExpect(status().isConflict());
+		mockMvc.perform(patch("/api/admin/users/{id}/role", admin.getId())
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"role\":\"CUSTOMER\"}"))
+				.andExpect(status().isConflict());
 		MvcResult userResult = mockMvc.perform(post("/api/admin/users")
 				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
 				.content("{\"username\":\"new-staff\",\"password\":\"Password123456\",\"displayName\":\"New Staff\",\"role\":\"WAITER\"}"))
@@ -208,6 +229,13 @@ class RestaurantApiIntegrationTests {
 				.content("{\"active\":false}"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.active").value(false));
 		mockMvc.perform(get("/api/menu/items/{id}", itemId)).andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/admin/menu/items").header("Authorization", bearer(adminToken))
+				.param("active", "false"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.content[0].active").value(false));
+		mockMvc.perform(patch("/api/menu/items/{id}/status", itemId)
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"active\":true}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
 	}
 
 	@Test

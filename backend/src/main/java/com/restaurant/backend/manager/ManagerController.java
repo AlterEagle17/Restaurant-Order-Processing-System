@@ -26,7 +26,12 @@ public class ManagerController {
 	}
 
 	@GetMapping("/dashboard")
-	public ManagerDashboardResponse dashboard(@RequestParam(required = false) LocalDate date) {
+	public ManagerDashboardResponse dashboard(@RequestParam(required = false) LocalDate date,
+			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to) {
+		if (from != null || to != null) {
+			if (date != null) throw new com.restaurant.backend.common.BusinessRuleException("Use date or from/to, not both");
+			return managerService.dashboardRange(from, to);
+		}
 		return managerService.dashboard(date);
 	}
 

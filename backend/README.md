@@ -35,7 +35,7 @@ There is no public registration endpoint and migrations do not insert example us
 
 ## Supabase PostgreSQL
 
-Copy `.env.example` as a reference and supply values through the process environment or deployment secret manager; Spring Boot does not automatically load `.env` files. Configure `DB_HOST`, `DB_PORT` (usually `5432`), `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSL_MODE`. For hosted Supabase use its database host/pooler endpoint and `DB_SSL_MODE=verify-full`; use the supplied database username/password. Do not put database credentials or Supabase service-role keys in frontend `VITE_` variables. V1 creates only application tables and indexes, and later schema changes must use new forward-only Flyway migrations.
+Copy `.env.example` as a reference and supply values through the process environment or deployment secret manager; Spring Boot does not automatically load `.env` files. Configure `DB_HOST`, `DB_PORT` (usually `5432`), `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSL_MODE=require`. For hosted Supabase use its direct or pooler endpoint and supplied database credentials. Do not put database credentials or Supabase service-role keys in frontend `VITE_` variables. V1 creates the initial schema and V2 adds historical order-item name snapshots; later changes must use new forward-only Flyway migrations.
 
 ## Environment variables
 
@@ -43,7 +43,7 @@ Copy `.env.example` as a reference and supply values through the process environ
 | --- | --- |
 | `DB_HOST`, `DB_PORT`, `DB_NAME` | PostgreSQL endpoint and database |
 | `DB_USERNAME`, `DB_PASSWORD` | Backend-only database credentials |
-| `DB_SSL_MODE` | PostgreSQL JDBC SSL mode; use `verify-full` for hosted PostgreSQL |
+| `DB_SSL_MODE` | PostgreSQL JDBC SSL mode; use `require` for Supabase |
 | `JWT_SECRET` | Base64 key containing at least 32 random bytes |
 | `JWT_EXPIRATION_MS` | Access token lifetime; defaults to 900000 ms |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated exact origins, no wildcard |
@@ -54,7 +54,7 @@ Copy `.env.example` as a reference and supply values through the process environ
 
 ## API and frontend integration
 
-See [API_CONTRACT.md](API_CONTRACT.md) for the full endpoint/request/response/role contract and the observed frontend gaps. The current frontend only configures Axios; it does not call the API, attach a bearer token, or use these response objects. Its development mock login remains separate. Before switching to backend authentication, add a frontend adapter for `/api/auth/login` and `/api/auth/me`, store/attach the returned token, and map the API menu/order/report DTOs to the dashboard view models. Then set `VITE_API_BASE_URL` to the deployed backend origin.
+See [API_CONTRACT.md](API_CONTRACT.md) for the full endpoint/request/response/role contract and frontend mappings. The frontend now has an explicit API mode: `VITE_USE_DEMO_AUTH=false` calls `/api/auth/login` and `/api/auth/me`, attaches the bearer token, and connects admin, customer, kitchen, waiter, cashier, and manager views to the API. `VITE_USE_DEMO_AUTH=true` is honored only by Vite development builds and keeps demo accounts local.
 
 ## Tests and packaging
 
@@ -72,7 +72,7 @@ Create a Render **Web Service** from the repository with `backend` as the Root D
 - Build command: `chmod +x mvnw && ./mvnw clean package`
 - Start command: `java -jar target/backend-0.0.1-SNAPSHOT.jar`
 - Health check path: `/actuator/health`
-- Environment: set `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE=verify-full`, a fresh `JWT_SECRET`, and `CORS_ALLOWED_ORIGINS` containing exact local/deployed frontend origins as needed.
+- Environment: set `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST`, `DB_PORT`, `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE=require`, a fresh `JWT_SECRET`, and `CORS_ALLOWED_ORIGINS` containing exact local/deployed frontend origins as needed.
 - For a new database, configure the optional bootstrap admin values for initial startup, then remove them after the first admin exists.
 
 Render supplies `PORT`; Spring Boot uses it automatically. No deployment has been performed or verified from this workspace.

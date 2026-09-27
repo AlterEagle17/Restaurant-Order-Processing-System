@@ -6,7 +6,7 @@ import java.util.UUID;
 public record OrderItemResponse(UUID menuItemId, String name, int quantity,
 		BigDecimal unitPrice, BigDecimal lineTotal) {
 	public static OrderItemResponse from(OrderLine item) {
-		return new OrderItemResponse(item.getMenuItem().getId(), item.getMenuItem().getName(), item.getQuantity(),
+		return new OrderItemResponse(item.getMenuItem().getId(), item.getItemName(), item.getQuantity(),
 				item.getUnitPrice(), item.getLineTotal());
 	}
 }

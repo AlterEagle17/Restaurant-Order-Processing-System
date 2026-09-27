@@ -11,23 +11,33 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.restaurant.backend.common.BusinessRuleException;
-import com.restaurant.backend.order.OrderRepository;
+import com.restaurant.backend.payment.PaymentRepository;
+import com.restaurant.backend.payment.PaymentStatus;
 
 @Service
 public class ManagerService {
-	private final OrderRepository orderRepository;
+	private final PaymentRepository paymentRepository;
 
-	public ManagerService(OrderRepository orderRepository) { this.orderRepository = orderRepository; }
+	public ManagerService(PaymentRepository paymentRepository) { this.paymentRepository = paymentRepository; }
 
 	@Transactional(readOnly = true)
 	public ManagerDashboardResponse dashboard(LocalDate date) {
 		LocalDate reportDate = date == null ? LocalDate.now(ZoneOffset.UTC) : date;
-		var from = reportDate.atStartOfDay().toInstant(ZoneOffset.UTC);
-		var to = reportDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
-		BigDecimal revenue = orderRepository.sumPaidBetween(from, to);
-		long orders = orderRepository.countPaidBetween(from, to);
+		return dashboardRange(reportDate, reportDate);
+	}
+
+	@Transactional(readOnly = true)
+	public ManagerDashboardResponse dashboardRange(LocalDate fromDate, LocalDate toDate) {
+		if (fromDate == null || toDate == null) throw new BusinessRuleException("Both from and to dates are required");
+		if (toDate.isBefore(fromDate)) throw new BusinessRuleException("to must be on or after from");
+		if (toDate.isAfter(fromDate.plusDays(92))) throw new BusinessRuleException("Date range cannot exceed 93 days");
+		var from = fromDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+		var to = toDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+		BigDecimal revenue = paymentRepository.sumSuccessfulBetween(from, to);
+		long orders = paymentRepository.countByStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(PaymentStatus.PAID, from, to);
 		BigDecimal average = orders == 0 ? BigDecimal.ZERO.setScale(2) : revenue.divide(BigDecimal.valueOf(orders), 2, RoundingMode.HALF_UP);
-		return new ManagerDashboardResponse(reportDate, revenue, orders, average);
+		LocalDate reportDate = fromDate.equals(toDate) ? fromDate : null;
+		return new ManagerDashboardResponse(reportDate, fromDate, toDate, revenue, orders, average);
 	}
 
 	@Transactional(readOnly = true)
@@ -39,7 +49,7 @@ public class ManagerService {
 		for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
 			var start = date.atStartOfDay().toInstant(ZoneOffset.UTC);
 			var end = date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
-			points.add(new RevenuePoint(date, orderRepository.sumPaidBetween(start, end)));
+			points.add(new RevenuePoint(date, paymentRepository.sumSuccessfulBetween(start, end)));
 		}
 		return new RevenueResponse(from, to, points);
 	}

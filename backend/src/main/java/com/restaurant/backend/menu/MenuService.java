@@ -27,18 +27,20 @@ public class MenuService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<MenuCategoryResponse> allCategoriesForAdmin() {
+		return categoryRepository.findAllByOrderByNameAsc().stream().map(MenuCategoryResponse::from).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public Page<MenuItemResponse> allItemsForAdmin(UUID categoryId, String query, Boolean active, int page, int size) {
+		String normalized = query == null || query.isBlank() ? null : query.trim();
+		return itemRepository.searchAll(categoryId, normalized, active, PageRequests.of(page, size)).map(MenuItemResponse::from);
+	}
+
+	@Transactional(readOnly = true)
 	public Page<MenuItemResponse> items(UUID categoryId, String query, int page, int size) {
-		Page<MenuItem> result;
 		String normalized = query == null ? "" : query.trim();
-		if (categoryId != null && !normalized.isEmpty()) {
-			result = itemRepository.findByCategoryIdAndNameContainingIgnoreCaseAndActiveTrue(categoryId, normalized, PageRequests.of(page, size));
-		} else if (categoryId != null) {
-			result = itemRepository.findByCategoryIdAndActiveTrue(categoryId, PageRequests.of(page, size));
-		} else if (!normalized.isEmpty()) {
-			result = itemRepository.findByNameContainingIgnoreCaseAndActiveTrue(normalized, PageRequests.of(page, size));
-		} else {
-			result = itemRepository.findByActiveTrue(PageRequests.of(page, size));
-		}
+		Page<MenuItem> result = itemRepository.searchActive(categoryId, normalized.isEmpty() ? null : normalized, PageRequests.of(page, size));
 		return result.map(MenuItemResponse::from);
 	}
 
@@ -59,6 +61,9 @@ public class MenuService {
 	public MenuCategoryResponse updateCategory(UUID id, MenuCategoryUpdateRequest request) {
 		MenuCategory category = requireCategory(id);
 		if (categoryRepository.existsByNameIgnoreCaseAndIdNot(request.name().trim(), id)) throw new ConflictException("Category name already exists");
+		if (category.isActive() && !request.active() && itemRepository.existsByCategoryIdAndActiveTrue(id)) {
+			throw new com.restaurant.backend.common.BusinessRuleException("Disable the category's active menu items before disabling the category");
+		}
 		category.update(request.name().trim(), request.description(), request.active());
 		return MenuCategoryResponse.from(category);
 	}

@@ -33,6 +33,9 @@ public class OrderLine {
 	@Column(nullable = false)
 	private int quantity;
 
+	@Column(name = "item_name", nullable = false, length = 120)
+	private String itemName;
+
 	@Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
 	private BigDecimal unitPrice;
 
@@ -44,6 +47,7 @@ public class OrderLine {
 	public OrderLine(MenuItem menuItem, int quantity) {
 		this.menuItem = menuItem;
 		this.quantity = quantity;
+		this.itemName = menuItem.getName();
 		this.unitPrice = menuItem.getPrice();
 		this.lineTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
 	}
@@ -51,6 +55,7 @@ public class OrderLine {
 	void setOrder(RestaurantOrder order) { this.order = order; }
 	public UUID getId() { return id; }
 	public MenuItem getMenuItem() { return menuItem; }
+	public String getItemName() { return itemName; }
 	public int getQuantity() { return quantity; }
 	public BigDecimal getUnitPrice() { return unitPrice; }
 	public BigDecimal getLineTotal() { return lineTotal; }

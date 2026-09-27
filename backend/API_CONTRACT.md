@@ -66,6 +66,8 @@ Item shape: `{ "id": "uuid", "name": "...", "description": "...", "categoryId": 
 
 ADMIN only: `POST /api/menu/categories` with `{name, description}`, `PUT /api/menu/categories/{id}` with `{name, description, active}`, `POST /api/menu/items` with `{name, description, categoryId, price, imageUrl}`, `PUT /api/menu/items/{id}` with the same fields, and `PATCH /api/menu/items/{id}/status` with `{active}`.
 
+ADMIN catalog reads include inactive records for management: `GET /api/admin/menu/categories` and `GET /api/admin/menu/items?categoryId=&query=&active=&page=0&size=100`.
+
 ## Orders
 
 - `POST /api/orders` — CUSTOMER. Request `{ "tableNumber": 4, "items": [{ "menuItemId": "uuid", "quantity": 2 }] }`. The server fetches current enabled menu prices and calculates all line totals. Response `201`:
@@ -93,13 +95,13 @@ ADMIN only: `POST /api/menu/categories` with `{name, description}`, `PUT /api/me
 - `GET /api/cashier/orders/pending` — CASHIER; served, unpaid orders.
 - `POST /api/cashier/orders/{id}/payments` — CASHIER; request `{ "method": "CASH" | "CARD" }`. This phase records a simulated payment, not a card charge; duplicate payment is rejected. Response includes `id, orderId, amount, status, method, createdAt`.
 - `GET /api/cashier/payments?page=0&size=25` — CASHIER; paged payment history.
-- `GET /api/manager/dashboard?date=YYYY-MM-DD` — MANAGER; `{ date, totalRevenue, totalOrders, averageOrderValue }`.
-- `GET /api/manager/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` — MANAGER; `{ from, to, points: [{ date, revenue }] }`.
+- `GET /api/manager/dashboard?date=YYYY-MM-DD` or `?from=YYYY-MM-DD&to=YYYY-MM-DD` — MANAGER; `{ date, from, to, totalRevenue, totalOrders, averageOrderValue }`, based on successful payment timestamps in UTC. Date ranges are limited to 93 days; use either `date` or `from`/`to`.
+- `GET /api/manager/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` — MANAGER; `{ from, to, points: [{ date, revenue }] }`, grouped by successful payment timestamp in UTC.
 - `GET /api/manager/orders?from=&to=&page=&size=` — MANAGER; paged order results.
 - `GET /actuator/health` — public liveness/readiness summary; details are not exposed.
 
 ## Frontend integration gap
 
-Before switching off its development mock, the frontend needs an API adapter: call `POST /api/auth/login`, keep the access token in memory (prefer an HttpOnly cookie in a later auth redesign), attach the bearer token through the Axios client, hydrate `AuthContext` from `GET /api/auth/me`, and send logout by discarding local token state. Its current `AuthUser` is compatible with the response's nested `user` after mapping `id, username, displayName, role`.
+The frontend uses an API adapter in API mode: call `POST /api/auth/login`, retain the access token for the browser session, attach the bearer token through the Axios client, hydrate `AuthContext` from `GET /api/auth/me`, and clear local token state on logout/401. Its current `AuthUser` maps from the response's nested `user` (`id, username, displayName, role`).
 
-The current dashboard mock order shape uses `table`, item `qty`, `total`, and a display-time string; the backend contract uses `tableNumber`, item `quantity`, decimal totals, and ISO timestamps. Menu categories/items and manager metrics also remain hardcoded locally. An explicit mapping layer is required; the backend does not claim drop-in compatibility with data that the frontend does not yet request. Configure `VITE_API_BASE_URL` to the backend origin only after that adapter is implemented.
+Dashboard order DTOs use `tableNumber`, item `quantity`, decimal totals, and ISO timestamps; the UI maps these to its existing `table`, `qty`, currency, and display-time fields. API mode reads catalog, orders, payment history, and reports from the backend. Demo mode remains isolated local sample state and is development-only. Configure `VITE_API_BASE_URL` to the backend origin for API mode.
