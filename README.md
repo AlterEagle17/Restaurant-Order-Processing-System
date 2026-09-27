@@ -38,3 +38,5 @@ Edit or remove development accounts in [`frontend/src/config/demoUsers.ts`](fron
 ## Backend and deployment
 
 The reusable Axios client reads `VITE_API_BASE_URL`; it is intentionally blank until a backend is available. See [`frontend/README.md`](frontend/README.md) for environment variable guidance, account configuration details, and Vercel deployment steps. Vercel should use `frontend` as its project root directory.
+
+The Spring Boot API is documented in [`backend/README.md`](backend/README.md), with its current endpoint and frontend compatibility details in [`backend/API_CONTRACT.md`](backend/API_CONTRACT.md). The backend has real JWT authentication and PostgreSQL persistence; the frontend still uses mock data and needs an API adapter before the two are connected.
