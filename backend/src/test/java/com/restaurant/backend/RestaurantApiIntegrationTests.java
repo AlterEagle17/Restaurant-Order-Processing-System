@@ -239,6 +239,41 @@ class RestaurantApiIntegrationTests {
 	}
 
 	@Test
+	void inactiveCategoryItemsCannotBeShownActivatedOrOrdered() throws Exception {
+		createUser("admin", Role.ADMIN);
+		createUser("customer", Role.CUSTOMER);
+		String adminToken = login("admin");
+		String customerToken = login("customer");
+		MenuCategory category = categoryRepository.save(new MenuCategory("Seasonal", "Seasonal dishes"));
+		MenuItem item = itemRepository.save(new MenuItem("Soup", "Daily soup", category, new BigDecimal("5.00"), null));
+		String itemId = item.getId().toString();
+		String categoryId = category.getId().toString();
+
+		mockMvc.perform(patch("/api/menu/items/{id}/status", itemId)
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"active\":false}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/menu/categories/{id}", categoryId)
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Seasonal\",\"description\":\"Seasonal dishes\",\"active\":false}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(patch("/api/menu/items/{id}/status", itemId)
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"active\":true}"))
+				.andExpect(status().isUnprocessableEntity());
+
+		item.setActive(true);
+		itemRepository.saveAndFlush(item);
+		mockMvc.perform(get("/api/menu/items"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty());
+		mockMvc.perform(get("/api/menu/items/{id}", itemId)).andExpect(status().isNotFound());
+		mockMvc.perform(post("/api/orders").header("Authorization", bearer(customerToken))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"tableNumber\":2,\"items\":[{\"menuItemId\":\"" + itemId + "\",\"quantity\":1}]}"))
+				.andExpect(status().isUnprocessableEntity());
+	}
+
+	@Test
 	void inactiveAccountCannotAuthenticate() throws Exception {
 		UserAccount user = createUser("disabled", Role.CUSTOMER);
 		user.setActive(false);

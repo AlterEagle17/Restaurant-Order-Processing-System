@@ -10,7 +10,7 @@ Spring Boot 4.1.1 REST API on Java 21, Maven, Spring Security, JPA, Flyway, and 
 
 ## Local development
 
-The application expects a PostgreSQL database and does not create or reset the database itself. Set environment variables in the terminal before starting it. Example PowerShell configuration (fill in values locally; do not commit credentials):
+The application expects a PostgreSQL database and does not create or reset the database itself. For local development, copy `.env.example` to `.env` in `backend/` and fill in local values, or set the same variables in the terminal. Never commit `.env` or put production credentials in the example file.
 
 ```powershell
 $env:SPRING_PROFILES_ACTIVE = 'local'
@@ -35,7 +35,7 @@ There is no public registration endpoint and migrations do not insert example us
 
 ## Supabase PostgreSQL
 
-Copy `.env.example` as a reference and supply values through the process environment or deployment secret manager; Spring Boot does not automatically load `.env` files. Configure `DB_HOST`, `DB_PORT` (usually `5432`), `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSL_MODE=require`. For hosted Supabase use its direct or pooler endpoint and supplied database credentials. Do not put database credentials or Supabase service-role keys in frontend `VITE_` variables. V1 creates the initial schema and V2 adds historical order-item name snapshots; later changes must use new forward-only Flyway migrations.
+The app explicitly imports an optional `backend/.env` as Java properties for local runs; Render should receive values through its Environment settings. Configure `DB_HOST`, `DB_PORT` (usually `5432`), `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSL_MODE=require` for Supabase. For hosted Supabase use its direct or pooler endpoint and supplied database credentials. Do not put database credentials or Supabase service-role keys in frontend `VITE_` variables. V1 creates the initial schema and V2 adds historical order-item name snapshots; later changes must use new forward-only Flyway migrations.
 
 ## Environment variables
 
@@ -67,12 +67,15 @@ The API integration suite uses H2 with the same Flyway migration and Hibernate s
 
 ## Render deployment
 
-Create a Render **Web Service** from the repository with `backend` as the Root Directory.
+Create a Render **Web Service** from `AlterEagle17/Restaurant-Order-Processing-System` on branch `main` with these Docker settings:
 
-- Build command: `chmod +x mvnw && ./mvnw clean package`
-- Start command: `java -jar target/backend-0.0.1-SNAPSHOT.jar`
+- Runtime: Docker
+- Root Directory: `backend`
+- Dockerfile Path: `Dockerfile`
+- Docker Context: `.`
+- Docker Command: leave blank to use the Dockerfile's default `CMD`
 - Health check path: `/actuator/health`
-- Environment: set `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST`, `DB_PORT`, `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE=require`, a fresh `JWT_SECRET`, and `CORS_ALLOWED_ORIGINS` containing exact local/deployed frontend origins as needed.
+- Environment: set `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST`, `DB_PORT`, `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE=require`, a fresh `JWT_SECRET`, and `CORS_ALLOWED_ORIGINS` containing exact deployed frontend origins as needed. Set secrets in Render, not in source files.
 - For a new database, configure the optional bootstrap admin values for initial startup, then remove them after the first admin exists.
 
 Render supplies `PORT`; Spring Boot uses it automatically. No deployment has been performed or verified from this workspace.

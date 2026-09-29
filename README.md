@@ -1,8 +1,6 @@
 # Linden House Restaurant Operations
 
-A responsive restaurant order processing frontend built with React, TypeScript, Vite, Tailwind CSS, React Router, Axios, and Lucide React.
-
-This phase provides a development-only mock login and separate workspaces for administrators, managers, cashiers, waiters, kitchen staff, and customers. It does not include a backend, real payment processing, or production authentication.
+A restaurant order processing system with a React, TypeScript, Vite, and Tailwind frontend and a Java 21, Spring Boot, and PostgreSQL backend. The frontend provides development-only demo authentication and a separate API mode backed by JWT authentication and role-protected REST endpoints. Payments are simulated; no payment gateway is connected.
 
 ## Run locally
 
@@ -37,6 +35,6 @@ Edit or remove development accounts in [`frontend/src/config/demoUsers.ts`](fron
 
 ## Backend and deployment
 
-The frontend supports real API authentication/data mode and a separate development-only demo mode. Configure `VITE_API_BASE_URL` and set `VITE_USE_DEMO_AUTH=false` to connect it to the backend. See [`frontend/README.md`](frontend/README.md) for environment variable and Vercel deployment steps.
+The frontend supports API mode and a separate development-only demo mode. Configure `VITE_API_BASE_URL` and set `VITE_USE_DEMO_AUTH=false` to connect it to the backend. See [`frontend/README.md`](frontend/README.md) for environment variable and Vercel deployment steps. The backend's Render Docker settings and environment variables are documented in [`backend/README.md`](backend/README.md).
 
 The Spring Boot API is documented in [`backend/README.md`](backend/README.md), with endpoint and frontend compatibility details in [`backend/API_CONTRACT.md`](backend/API_CONTRACT.md). The backend has JWT authentication and PostgreSQL persistence; no deployment has been performed.

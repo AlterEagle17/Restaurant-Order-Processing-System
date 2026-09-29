@@ -34,9 +34,18 @@ export function setUnauthorizedHandler(handler: (() => void) | undefined) {
   unauthorizedHandler = handler
 }
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || undefined,
+  baseURL: apiBaseUrl || undefined,
   headers: { 'Content-Type': 'application/json' },
+})
+
+api.interceptors.request.use((config) => {
+  if (import.meta.env.PROD && !apiBaseUrl) {
+    return Promise.reject(new ApiRequestError('Backend API is not configured. Set VITE_API_BASE_URL to the Render service origin.'))
+  }
+  return config
 })
 
 api.interceptors.response.use(

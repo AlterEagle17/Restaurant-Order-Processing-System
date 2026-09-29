@@ -1,6 +1,49 @@
 # Full-Stack Audit
 
-Audit date: 2026-09-27
+Audit date: 2026-09-29
+
+## Current status
+
+The detailed findings below are a historical snapshot from 2026-09-27. Its statements that the frontend is mock-only and the backend lacks JWT/order snapshots are stale and superseded by the current implementation. The current verified state is summarized here.
+
+### Integration matrix
+
+| Frontend feature | API endpoint(s) | Controller → service → persistence | Database data |
+| --- | --- | --- | --- |
+| Login and session | `POST /api/auth/login`, `GET /api/auth/me` | `AuthController` → `AuthService` → `UserRepository` | `users` |
+| Admin accounts | `/api/admin/users` and account update/status/role/password routes | `AdminUserController` → `AdminUserService` → `UserRepository` | `users` |
+| Admin menu | `/api/admin/menu/categories`, `/api/admin/menu/items`; `/api/menu` catalog mutations | `AdminMenuController`/`MenuController` → `MenuService` → `MenuCategoryRepository`, `MenuItemRepository` | `menu_categories`, `menu_items` |
+| Customer menu and orders | `GET /api/menu/*`, `POST /api/orders`, `GET /api/orders/my-orders` | `MenuController`/`OrderController` → `MenuService`/`OrderService` → menu, user, and order repositories | menu tables, `users`, `orders`, `order_items` |
+| Kitchen and waiter workflow | `/api/kitchen/orders/*`, `/api/waiter/orders/*` | `KitchenController`/`WaiterController` → `OrderService` → `OrderRepository` | `orders` |
+| Cashier payments | `/api/cashier/orders/pending`, `/api/cashier/orders/{id}/payments`, `/api/cashier/payments` | `CashierController` → `OrderService`/`PaymentService` → `OrderRepository`, `PaymentRepository`, `UserRepository` | `orders`, `payments`, `users` |
+| Manager reports | `/api/manager/dashboard`, `/api/manager/revenue`, `/api/manager/orders` | `ManagerController` → `ManagerService`/`OrderService` → `PaymentRepository`/`OrderRepository` | `payments`, `orders` |
+
+The frontend service methods, HTTP verbs, request payloads, and response DTOs were checked against these controllers and the API contract. API mode attaches a bearer JWT and clears the session on `401`; role access is enforced by Spring Security. Payment recording is simulated, not a payment-gateway integration.
+
+### Current confirmed findings
+
+- **MEDIUM, fixed:** inactive categories could be bypassed by reactivating a child item after category deactivation. Menu reads, item activation, and order creation now all require the category to be active; an integration regression test covers this invariant.
+- **LOW, mitigated in UI:** the cashier metric previously called its latest-25 payment-history aggregation “Paid today.” It now accurately says “Recent payments” and identifies the latest 25 records. The existing API does not expose a date-filtered cashier summary.
+- **LOW, fixed:** production API requests previously fell through to a same-origin URL when `VITE_API_BASE_URL` was missing. API requests now reject with a configuration-specific error.
+- **LOW, fixed:** the committed backend POM started with whitespace before its XML declaration and Maven rejected it. The declaration is now the first document content.
+- **LOW, fixed:** Render guidance used native Maven commands despite the backend Dockerfile; it now specifies Docker runtime and backend-root-relative Dockerfile/context settings. Backend environment documentation now matches the optional `.env` property import, and safe placeholder environment examples are available.
+- **LOW, fixed:** root/API docs described the old mock-only frontend and contradicted current API mode. They now describe the current architecture; this file labels its older detailed issue list as a historical snapshot.
+- **LOW, remaining:** admin API dashboards fetch only page 0 of up to 100 users/menu items and have no pagination controls. Large catalogs/accounts may not be fully visible or searchable in the UI.
+
+### Verification on 2026-09-29
+
+- Backend `cd backend; .\\mvnw.cmd clean verify`: **BUILD SUCCESS**, 6 tests passed, 0 failures/errors. H2 applied Flyway v1 and v2 and Hibernate schema validation succeeded. A packaged JAR was produced.
+- Frontend `cd frontend; npm run lint`: passed.
+- Frontend `cd frontend; npm test`: 3 test files, 9 tests passed.
+- Frontend `cd frontend; npm run build`: TypeScript and Vite production build passed.
+- Environment hygiene: backend and frontend `.gitignore` patterns exclude `.env` and variant files while allowing `.env.example` templates. No real `.env` file is committed.
+- Vercel rewrite routes application paths to `index.html`. Render settings are documented in `backend/README.md` and require Runtime Docker, Root Directory `backend`, Dockerfile Path `Dockerfile`, Docker Context `.`, and the Dockerfile default command.
+
+### Not verified
+
+No live Render deployment, Vercel deployment, Supabase connection, PostgreSQL Flyway migration, or deployed health-check/authentication smoke test was run. H2 tests do not prove PostgreSQL/Supabase compatibility. These checks require active service settings and a rotated database credential; the database password shared in conversation should be rotated before use. Do not use production data for destructive tests.
+
+## Historical snapshot (2026-09-27)
 
 This audit covers the current React/Vite frontend, Spring Boot backend, API contract, migrations, tests, and deployment configuration. Existing visual styling and the current folder layout are intentionally retained.
 

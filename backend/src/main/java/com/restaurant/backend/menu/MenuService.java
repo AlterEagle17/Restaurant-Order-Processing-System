@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.restaurant.backend.common.BusinessRuleException;
 import com.restaurant.backend.common.ConflictException;
 import com.restaurant.backend.common.PageRequests;
 import com.restaurant.backend.common.ResourceNotFoundException;
@@ -46,7 +47,7 @@ public class MenuService {
 
 	@Transactional(readOnly = true)
 	public MenuItemResponse item(UUID id) {
-		MenuItem item = itemRepository.findById(id).filter(MenuItem::isActive)
+		MenuItem item = itemRepository.findById(id).filter(menuItem -> menuItem.isActive() && menuItem.getCategory().isActive())
 				.orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 		return MenuItemResponse.from(item);
 	}
@@ -71,7 +72,7 @@ public class MenuService {
 	@Transactional
 	public MenuItemResponse createItem(MenuItemRequest request) {
 		MenuCategory category = requireCategory(request.categoryId());
-		if (!category.isActive()) throw new com.restaurant.backend.common.BusinessRuleException("Cannot add an item to an inactive category");
+		if (!category.isActive()) throw new BusinessRuleException("Cannot add an item to an inactive category");
 		return MenuItemResponse.from(itemRepository.save(toItem(request, category)));
 	}
 
@@ -79,7 +80,7 @@ public class MenuService {
 	public MenuItemResponse updateItem(UUID id, MenuItemRequest request) {
 		MenuItem item = itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 		MenuCategory category = requireCategory(request.categoryId());
-		if (!category.isActive()) throw new com.restaurant.backend.common.BusinessRuleException("Cannot use an inactive category");
+		if (!category.isActive()) throw new BusinessRuleException("Cannot use an inactive category");
 		item.update(request.name().trim(), request.description(), category, request.price(), request.imageUrl());
 		return MenuItemResponse.from(item);
 	}
@@ -87,6 +88,7 @@ public class MenuService {
 	@Transactional
 	public MenuItemResponse setItemActive(UUID id, boolean active) {
 		MenuItem item = itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
+		if (active && !item.getCategory().isActive()) throw new BusinessRuleException("Cannot activate an item in an inactive category");
 		item.setActive(active);
 		return MenuItemResponse.from(item);
 	}

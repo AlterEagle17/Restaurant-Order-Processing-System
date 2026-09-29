@@ -1,10 +1,10 @@
 # API Contract and Frontend Compatibility
 
-## What the current frontend uses
+## Current frontend integration
 
-The frontend has a reusable Axios instance in `frontend/src/services/api.ts` configured with `VITE_API_BASE_URL`, but no frontend module imports or calls it. `frontend/src/services/authService.ts` authenticates against `frontend/src/config/demoUsers.ts` only in Vite development mode. `AuthContext` stores a mock profile in `sessionStorage`; it does not receive or attach a JWT. The six dashboard routes and their menu, order, payment, and revenue data are local React state/constants in `frontend/src/App.tsx`.
+The frontend has two modes. Vite development can use local demo accounts when `VITE_USE_DEMO_AUTH=true`; production builds always use API authentication. API mode calls the Spring Boot endpoints below through role-specific typed services, stores the access token in session-scoped browser storage, attaches it as a bearer token, and clears the session on logout or `401`. Demo credentials are never sent to the backend.
 
-Consequently, no live backend request or response DTO is currently defined by the frontend. The API schemas below are the backend integration contract proposed for the first frontend API adapter; they are not structures currently consumed by the UI. Frontend mock authentication remains separate and must not be used as backend credentials.
+The endpoint and DTO definitions below describe the current backend/frontend contract. The UI maps backend DTOs into its existing dashboard view models. Payment records are simulated and do not represent a real card charge.
 
 ## Conventions
 
@@ -100,8 +100,8 @@ ADMIN catalog reads include inactive records for management: `GET /api/admin/men
 - `GET /api/manager/orders?from=&to=&page=&size=` — MANAGER; paged order results.
 - `GET /actuator/health` — public liveness/readiness summary; details are not exposed.
 
-## Frontend integration gap
+## Frontend data mapping
 
-The frontend uses an API adapter in API mode: call `POST /api/auth/login`, retain the access token for the browser session, attach the bearer token through the Axios client, hydrate `AuthContext` from `GET /api/auth/me`, and clear local token state on logout/401. Its current `AuthUser` maps from the response's nested `user` (`id, username, displayName, role`).
+The login response's nested `user` maps to `AuthUser` fields (`id`, `username`, `displayName`, and `role`). Dashboard order DTOs use `tableNumber`, item `quantity`, decimal totals, and ISO timestamps; the UI maps these to its existing `table`, `qty`, currency, and display-time fields. API mode reads catalog, orders, payment history, and reports from the backend. Demo mode remains isolated local sample state and is development-only. Configure `VITE_API_BASE_URL` to the backend origin; a production request fails with an explicit configuration error when it is missing.
 
-Dashboard order DTOs use `tableNumber`, item `quantity`, decimal totals, and ISO timestamps; the UI maps these to its existing `table`, `qty`, currency, and display-time fields. API mode reads catalog, orders, payment history, and reports from the backend. Demo mode remains isolated local sample state and is development-only. Configure `VITE_API_BASE_URL` to the backend origin for API mode.
+The API contract and H2 integration tests are verified locally. Live Render, Vercel, and Supabase connectivity must be verified in those deployed services; local tests do not establish hosted connectivity.
