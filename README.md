@@ -20,16 +20,16 @@ npm run lint
 
 ## Development demo accounts
 
-These accounts work only with the Vite development server. They are not real or secure accounts and must not be used in production.
+These accounts work with the Vite development server and are also seeded by backend migration V3 for local API development. They are not real or secure accounts and must not be used in production.
 
 | Role | Username | Password |
 | --- | --- | --- |
-| Admin | `admin` | `Admin@12345` |
-| Manager | `manager` | `Manager@12345` |
-| Cashier | `cashier` | `Cashier@12345` |
-| Waiter | `waiter` | `Waiter@12345` |
-| Kitchen staff | `kitchen` | `Kitchen@12345` |
-| Customer | `customer` | `Customer@12345` |
+| Admin | `admin@restaurant.test` | `Admin@12345` |
+| Manager | `manager@restaurant.test` | `Manager@12345` |
+| Cashier | `cashier@restaurant.test` | `Cashier@12345` |
+| Waiter | `waiter@restaurant.test` | `Waiter@12345` |
+| Kitchen staff | `kitchen@restaurant.test` | `Kitchen@12345` |
+| Customer | `customer@restaurant.test` | `Customer@12345` |
 
 Edit or remove development accounts in [`frontend/src/config/demoUsers.ts`](frontend/src/config/demoUsers.ts). The login page's quick-fill panel is also development-only.
 

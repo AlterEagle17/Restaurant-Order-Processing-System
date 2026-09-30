@@ -38,6 +38,7 @@ The frontend service methods, HTTP verbs, request payloads, and response DTOs we
 - Frontend `cd frontend; npm run build`: TypeScript and Vite production build passed.
 - Environment hygiene: backend and frontend `.gitignore` patterns exclude `.env` and variant files while allowing `.env.example` templates. No real `.env` file is committed.
 - Vercel rewrite routes application paths to `index.html`. Render settings are documented in `backend/README.md` and require Runtime Docker, Root Directory `backend`, Dockerfile Path `Dockerfile`, Docker Context `.`, and the Dockerfile default command.
+- Production defaults: `application-prod.properties` targets the supplied Supabase shared pooler on port 5432 with database `postgres`, its project-scoped username, and SSL `require`; the password and JWT secret remain mandatory external secrets. The backend `.env.example` contains placeholder secrets only. The production profile has no localhost database fallback.
 
 ### Not verified
 

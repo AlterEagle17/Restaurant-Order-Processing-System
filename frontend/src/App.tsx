@@ -10,7 +10,7 @@ import { useAuth } from './contexts/useAuth'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { ROLE_HOME, USER_ROLES, type DemoAccount, type UserRole } from './types/auth'
 import type { ManagerDashboardDto, MenuCategoryDto, MenuItemDto, OrderDto, PaymentDto, RevenuePointDto, UserSummary } from './types/api'
-import { createOrder, listKitchenOrders, listMyOrders, listOrders, listPayments, listPendingCashierOrders, listWaiterOrders, recordSimulatedPayment, serveOrder, updateKitchenOrder } from './services/orderApi'
+import { createOrder, listKitchenOrders, listMyOrders, listOrders, listPendingCashierOrders, listWaiterOrders, recordSimulatedPayment, serveOrder, updateKitchenOrder } from './services/orderApi'
 import { createMenuCategory, createMenuItem, listAdminMenuCategories, listAdminMenuItems, listMenuCategories, listMenuItems, setMenuItemActive, updateMenuCategory, updateMenuItem } from './services/menuApi'
 import { createUser, listUsers, resetUserPassword, setUserActive, setUserRole, updateUser } from './services/adminApi'
 import { getManagerDashboard, getManagerRevenue, listManagerOrders } from './services/managerApi'
@@ -31,14 +31,6 @@ function mapOrder(dto: OrderDto): Order {
     time: new Date(dto.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
   }
 }
-const initialOrders: Order[] = [
-  { id: 'ORD-1048', table: 6, guest: 'Avery James', status: 'RECEIVED', items: [{ name: 'Truffle rigatoni', qty: 2 }, { name: 'Garden salad', qty: 1 }], total: 62, time: '12:42 PM' },
-  { id: 'ORD-1047', table: 3, guest: 'Sam Rivera', status: 'PREPARING', items: [{ name: 'Roast chicken', qty: 1 }, { name: 'Rosemary potatoes', qty: 2 }], total: 54, time: '12:38 PM' },
-  { id: 'ORD-1046', table: 8, guest: 'Charlie Kim', status: 'READY', items: [{ name: 'Seared salmon', qty: 2 }, { name: 'Citrus soda', qty: 2 }], total: 76, time: '12:31 PM' },
-  { id: 'ORD-1045', table: 2, guest: 'Robin Flores', status: 'SERVED', items: [{ name: 'Wild mushroom toast', qty: 1 }, { name: 'Espresso', qty: 2 }], total: 32, time: '12:19 PM' },
-  { id: 'ORD-1044', table: 5, guest: 'Drew Parker', status: 'RECEIVED', items: [{ name: 'Crispy calamari', qty: 1 }, { name: 'Truffle rigatoni', qty: 1 }], total: 47, time: '12:14 PM' },
-  { id: 'ORD-1043', table: 1, guest: 'Casey Ward', status: 'PAID', items: [{ name: 'Roast chicken', qty: 1 }, { name: 'House lemonade', qty: 1 }], total: 38, time: '11:58 AM' },
-]
 const menuItems = [
   { id: 'm1', name: 'Truffle rigatoni', category: 'Mains', price: 24, description: 'Fresh pasta, wild mushroom, parmesan', image: 'photo-1473093295043-cdd812d0e601' },
   { id: 'm2', name: 'Roast chicken', category: 'Mains', price: 28, description: 'Herb jus, rosemary potatoes, greens', image: 'photo-1532550907401-a500c9a57435' },
@@ -51,18 +43,18 @@ const roleNames: Record<UserRole, string> = { ADMIN: 'Administrator', MANAGER: '
 const navigation: Record<UserRole, { label: string; icon: typeof LayoutDashboard }[]> = {
   ADMIN: [{ label: 'Overview', icon: LayoutDashboard }, { label: 'User management', icon: Users }, { label: 'Menu & categories', icon: Utensils }],
   MANAGER: [{ label: 'Overview', icon: LayoutDashboard }, { label: 'Orders', icon: ShoppingBag }],
-  CASHIER: [{ label: 'Billing desk', icon: CreditCard }, { label: 'Payment history', icon: CircleDollarSign }],
+  CASHIER: [{ label: 'Billing desk', icon: CreditCard }],
   WAITER: [{ label: 'Service board', icon: Utensils }, { label: 'All orders', icon: ShoppingBag }],
   KITCHEN_STAFF: [{ label: 'Kitchen board', icon: ChefHat }],
-  CUSTOMER: [{ label: 'Order menu', icon: MenuIcon }, { label: 'My orders', icon: ShoppingBag }],
+  CUSTOMER: [{ label: 'Order menu', icon: MenuIcon }],
 }
 type WorkspaceContext = { orders: Order[]; setOrders: (orders: Order[]) => void; notify: (message: string) => void; section: string; setSection: (section: string) => void }
 
 function App() {
-  const [orders, setOrders] = useState(initialOrders)
+  const [orders, setOrders] = useState<Order[]>([])
   const [toast, setToast] = useState('')
   const [section, setSection] = useState('overview')
-  function notify(message: string) { setToast(message); window.setTimeout(() => setToast(''), 2600) }
+    function notify(message: string) { setToast(message); window.setTimeout(() => setToast(''), 2600); }
   const workspace = { orders, setOrders, notify, section, setSection }
   return <AuthProvider><BrowserRouter><Routes>
     <Route path="/" element={<Navigate to="/login" replace />} />
@@ -444,7 +436,7 @@ function CashierDashboard() {
 function CashierApiDashboard() {
   const { notify } = useWorkspace()
   const [pending, setPending] = useState<Order[]>([])
-  const [payments, setPayments] = useState<PaymentDto[]>([])
+  const [payments] = useState<PaymentDto[]>([])
   const [selected, setSelected] = useState<Order | null>(null)
   const [method, setMethod] = useState<'CASH' | 'CARD'>('CASH')
   const [loading, setLoading] = useState(true)
@@ -454,9 +446,8 @@ function CashierApiDashboard() {
   async function refresh() {
     setLoading(true)
     try {
-      const [orders, history] = await Promise.all([listPendingCashierOrders(), listPayments(0, 25)])
+      const orders = await listPendingCashierOrders()
       setPending(orders.map(mapOrder))
-      setPayments(history.content)
       setError('')
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not load cashier data.')
@@ -469,10 +460,9 @@ function CashierApiDashboard() {
     let active = true
     const load = async () => {
       try {
-        const [orders, history] = await Promise.all([listPendingCashierOrders(), listPayments(0, 25)])
+        const orders = await listPendingCashierOrders()
         if (!active) return
         setPending(orders.map(mapOrder))
-        setPayments(history.content)
         setError('')
         setLoading(false)
       } catch (requestError) {
@@ -639,8 +629,8 @@ function CustomerApiDashboard() {
   const [search, setSearch] = useState('')
   const [table, setTable] = useState('')
   const [cart, setCart] = useState<Record<string, number>>({})
-  const { section, setSection } = useWorkspace()
-  const showHistory = section === 'orders'
+  const { setSection } = useWorkspace()
+  const showHistory = false
   const [history, setHistory] = useState<Order[]>([])
   const [lastOrder, setLastOrder] = useState<Order | null>(null)
   const [menuLoading, setMenuLoading] = useState(true)
@@ -734,8 +724,8 @@ function CustomerApiDashboard() {
 
 function CustomerDashboard() {
   const { user } = useAuth(); const { orders, setOrders, notify } = useWorkspace()
-  const { section, setSection } = useWorkspace()
-  const [category, setCategory] = useState('All items'); const [search, setSearch] = useState(''); const [table, setTable] = useState(''); const [cart, setCart] = useState<Record<string, number>>({}); const showHistory = section === 'orders'
+  const { setSection } = useWorkspace()
+  const [category, setCategory] = useState('All items'); const [search, setSearch] = useState(''); const [table, setTable] = useState(''); const [cart, setCart] = useState<Record<string, number>>({}); const showHistory = false
   const categories = ['All items', 'Starters', 'Mains', 'Drinks']; const filtered = menuItems.filter((item) => (category === 'All items' || item.category === category) && `${item.name} ${item.description}`.toLowerCase().includes(search.toLowerCase()))
   const cartCount = Object.values(cart).reduce((sum, amount) => sum + amount, 0); const total = menuItems.reduce((sum, item) => sum + item.price * (cart[item.id] ?? 0), 0); const mine = orders.filter((order) => order.guest === user?.displayName)
   function placeOrder() { if (!table || cartCount === 0) { notify(!table ? 'Choose a table number before placing your order.' : 'Add an item to your order first.'); return } const order: Order = { id: `ORD-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, table: Number(table), guest: user?.displayName ?? 'Guest', status: 'RECEIVED', items: menuItems.filter((item) => cart[item.id]).map((item) => ({ name: item.name, qty: cart[item.id] })), total, time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }; setOrders([order, ...orders]); setCart({}); notify('Your demo order has been sent to the kitchen.') }

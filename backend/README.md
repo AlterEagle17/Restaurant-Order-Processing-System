@@ -31,11 +31,11 @@ Generate a 256-bit Base64 JWT key using a trusted local tool, for example `opens
 
 ## First administrator
 
-There is no public registration endpoint and migrations do not insert example users. To initialize a new database, optionally set `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD` (12–72 characters), and `BOOTSTRAP_ADMIN_DISPLAY_NAME` before the first startup. A BCrypt-hashed ADMIN is created only if the user table is empty. Once an administrator exists, these variables cannot add another user; remove the bootstrap variables after initialization. Create all later accounts through the ADMIN API.
+There is no public registration endpoint. Migration V3 inserts the six development accounts documented below with BCrypt-hashed passwords. For a database without those migration users, optionally set `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD` (12–72 characters), and `BOOTSTRAP_ADMIN_DISPLAY_NAME` before the first startup. A BCrypt-hashed ADMIN is created only if the user table is empty. Once an administrator exists, these variables cannot add another user; remove the bootstrap variables after initialization. Create all later accounts through the ADMIN API.
 
 ## Supabase PostgreSQL
 
-The app explicitly imports an optional `backend/.env` as Java properties for local runs; Render should receive values through its Environment settings. Configure `DB_HOST`, `DB_PORT` (usually `5432`), `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSL_MODE=require` for Supabase. For hosted Supabase use its direct or pooler endpoint and supplied database credentials. Do not put database credentials or Supabase service-role keys in frontend `VITE_` variables. V1 creates the initial schema and V2 adds historical order-item name snapshots; later changes must use new forward-only Flyway migrations.
+The app explicitly imports an optional `backend/.env` as Java properties for local runs; Render should receive secrets through its Environment settings. The `prod` profile defaults the non-sensitive connection values to the Supabase shared pooler (`DB_HOST=aws-0-ap-northeast-1.pooler.supabase.com`, `DB_PORT=5432`, `DB_NAME=postgres`, `DB_USERNAME=postgres.qpwmthtsljferxrhycwg`, `DB_SSL_MODE=require`). Override these values with Render environment variables only when the database endpoint differs. `DB_PASSWORD` and `JWT_SECRET` remain required runtime secrets. Do not put database credentials or Supabase service-role keys in frontend `VITE_` variables. V1 creates the initial schema and V2 adds historical order-item name snapshots; later changes must use new forward-only Flyway migrations.
 
 ## Environment variables
 
@@ -75,7 +75,7 @@ Create a Render **Web Service** from `AlterEagle17/Restaurant-Order-Processing-S
 - Docker Context: `.`
 - Docker Command: leave blank to use the Dockerfile's default `CMD`
 - Health check path: `/actuator/health`
-- Environment: set `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST`, `DB_PORT`, `DB_NAME=postgres`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE=require`, a fresh `JWT_SECRET`, and `CORS_ALLOWED_ORIGINS` containing exact deployed frontend origins as needed. Set secrets in Render, not in source files.
+- Environment: set `SPRING_PROFILES_ACTIVE=prod`, `DB_PASSWORD`, a fresh Base64 `JWT_SECRET` containing at least 32 random bytes, and `CORS_ALLOWED_ORIGINS` to the exact deployed frontend origin(s). Supabase host, port, database, username, and SSL mode default to the values above; they can be overridden in Render if needed. Set optional bootstrap admin variables only when initializing an empty database, then remove the bootstrap password. Set secrets in Render, not in source files.
 - For a new database, configure the optional bootstrap admin values for initial startup, then remove them after the first admin exists.
 
 Render supplies `PORT`; Spring Boot uses it automatically. No deployment has been performed or verified from this workspace.
