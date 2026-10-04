@@ -68,16 +68,18 @@ class RestaurantApiIntegrationTests {
 	@Test
 	void loginCurrentUserAndRoleAccessAreEnforced() throws Exception {
 		createUser("admin", Role.ADMIN);
-		createUser("customer", Role.CUSTOMER);
+		createTableAccount("table12", 12);
 		mockMvc.perform(get("/api/auth/me"))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
 
-		String customerToken = login("customer");
+		String customerToken = login("table12");
 		mockMvc.perform(get("/api/auth/me").header("Authorization", bearer(customerToken)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.username").value("customer"))
-				.andExpect(jsonPath("$.role").value("CUSTOMER"));
+				.andExpect(jsonPath("$.username").value("table12"))
+				.andExpect(jsonPath("$.role").value("CUSTOMER"))
+				.andExpect(jsonPath("$.tableAccount").value(true))
+				.andExpect(jsonPath("$.tableNumber").value(12));
 		mockMvc.perform(get("/api/admin/users").header("Authorization", bearer(customerToken)))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.error").value("FORBIDDEN"));
@@ -92,7 +94,7 @@ class RestaurantApiIntegrationTests {
 
 	@Test
 	void orderUsesDatabasePricesAndCompletesTransactionalPaymentWorkflow() throws Exception {
-		createUser("customer", Role.CUSTOMER);
+		UserAccount tableAccount = createTableAccount("table04", 4);
 		createUser("kitchen", Role.KITCHEN_STAFF);
 		createUser("waiter", Role.WAITER);
 		createUser("cashier", Role.CASHIER);
@@ -103,7 +105,7 @@ class RestaurantApiIntegrationTests {
 		mockMvc.perform(get("/api/menu/items").param("categoryId", category.getId().toString()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content[0].name").value("Pasta"));
-		String customerToken = login("customer");
+		String customerToken = login("table04");
 		String kitchenToken = login("kitchen");
 		String waiterToken = login("waiter");
 		String cashierToken = login("cashier");
@@ -111,14 +113,24 @@ class RestaurantApiIntegrationTests {
 
 		MvcResult created = mockMvc.perform(post("/api/orders")
 				.header("Authorization", bearer(customerToken)).contentType(MediaType.APPLICATION_JSON)
-				.content("{\"tableNumber\":4,\"total\":0.01,\"items\":[{\"menuItemId\":\"" + menuItem.getId()
+				.content("{\"customerName\":\"Ravi\",\"tableNumber\":12,\"total\":0.01,\"items\":[{\"menuItemId\":\"" + menuItem.getId()
 						+ "\",\"quantity\":2,\"unitPrice\":0.01}]}"))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.total").value(25.0))
+				.andExpect(jsonPath("$.tableNumber").value(4))
+				.andExpect(jsonPath("$.customerName").value("Ravi"))
 				.andExpect(jsonPath("$.items[0].unitPrice").value(12.5))
 				.andExpect(jsonPath("$.paymentStatus").value("PENDING"))
 				.andReturn();
 		String orderId = readField(created, "id");
+		mockMvc.perform(post("/api/orders")
+				.header("Authorization", bearer(customerToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"customerName\":\"Priya\",\"items\":[{\"menuItemId\":\"" + menuItem.getId()
+						+ "\",\"quantity\":1}]}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.tableNumber").value(4))
+				.andExpect(jsonPath("$.customerName").value("Priya"));
+		org.junit.jupiter.api.Assertions.assertEquals("Table 04", tableAccount.getDisplayName());
 		menuItem.update("Renamed pasta", "Updated menu label", category, menuItem.getPrice(), null);
 		itemRepository.save(menuItem);
 		mockMvc.perform(get("/api/orders/{id}", orderId).header("Authorization", bearer(customerToken)))
@@ -174,9 +186,25 @@ class RestaurantApiIntegrationTests {
 	}
 
 	@Test
+	void regularCustomerCannotChooseATableOrCreateATableOrder() throws Exception {
+		createUser("customer", Role.CUSTOMER);
+		String customerToken = login("customer");
+		mockMvc.perform(post("/api/orders").header("Authorization", bearer(customerToken))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"customerName\":\"Ravi\",\"tableNumber\":12,\"items\":[{\"menuItemId\":\"00000000-0000-0000-0000-000000000001\",\"quantity\":1}]}"))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.message").value("Orders can only be placed from an assigned table account"));
+	}
+
+	@Test
 	void adminCanManageUsersAndCatalogWithoutReturningPasswordHashes() throws Exception {
 		UserAccount admin = createUser("admin", Role.ADMIN);
+		UserAccount tableAccount = createTableAccount("table03", 3);
 		String adminToken = login("admin");
+		mockMvc.perform(patch("/api/admin/users/{id}/role", tableAccount.getId())
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"role\":\"WAITER\"}"))
+				.andExpect(status().isConflict());
 		mockMvc.perform(patch("/api/admin/users/{id}/status", admin.getId())
 				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
 				.content("{\"active\":false}"))
@@ -241,9 +269,9 @@ class RestaurantApiIntegrationTests {
 	@Test
 	void inactiveCategoryItemsCannotBeShownActivatedOrOrdered() throws Exception {
 		createUser("admin", Role.ADMIN);
-		createUser("customer", Role.CUSTOMER);
+		createTableAccount("table02", 2);
 		String adminToken = login("admin");
-		String customerToken = login("customer");
+		String customerToken = login("table02");
 		MenuCategory category = categoryRepository.save(new MenuCategory("Seasonal", "Seasonal dishes"));
 		MenuItem item = itemRepository.save(new MenuItem("Soup", "Daily soup", category, new BigDecimal("5.00"), null));
 		String itemId = item.getId().toString();
@@ -269,7 +297,7 @@ class RestaurantApiIntegrationTests {
 		mockMvc.perform(get("/api/menu/items/{id}", itemId)).andExpect(status().isNotFound());
 		mockMvc.perform(post("/api/orders").header("Authorization", bearer(customerToken))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"tableNumber\":2,\"items\":[{\"menuItemId\":\"" + itemId + "\",\"quantity\":1}]}"))
+				.content("{\"customerName\":\"Anu\",\"items\":[{\"menuItemId\":\"" + itemId + "\",\"quantity\":1}]}"))
 				.andExpect(status().isUnprocessableEntity());
 	}
 
@@ -286,6 +314,11 @@ class RestaurantApiIntegrationTests {
 
 	private UserAccount createUser(String username, Role role) {
 		return userRepository.save(new UserAccount(username, passwordEncoder.encode("Password123456"), username, role));
+	}
+
+	private UserAccount createTableAccount(String username, int tableNumber) {
+		return userRepository.save(new UserAccount(username, passwordEncoder.encode("Password123456"),
+				String.format("Table %02d", tableNumber), Role.CUSTOMER, tableNumber));
 	}
 
 	private String login(String username) throws Exception {

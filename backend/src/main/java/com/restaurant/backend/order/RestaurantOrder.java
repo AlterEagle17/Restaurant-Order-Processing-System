@@ -37,6 +37,9 @@ public class RestaurantOrder {
 	@JoinColumn(name = "customer_id", nullable = false)
 	private UserAccount customer;
 
+	@Column(name = "customer_name", nullable = false, length = 120)
+	private String customerName;
+
 	@Column(name = "table_number", nullable = false)
 	private int tableNumber;
 
@@ -59,9 +62,10 @@ public class RestaurantOrder {
 
 	protected RestaurantOrder() { }
 
-	public RestaurantOrder(String orderNumber, UserAccount customer, int tableNumber) {
+	public RestaurantOrder(String orderNumber, UserAccount customer, String customerName, int tableNumber) {
 		this.orderNumber = orderNumber;
 		this.customer = customer;
+		this.customerName = customerName;
 		this.tableNumber = tableNumber;
 	}
 
@@ -76,6 +80,7 @@ public class RestaurantOrder {
 	public UUID getId() { return id; }
 	public String getOrderNumber() { return orderNumber; }
 	public UserAccount getCustomer() { return customer; }
+	public String getCustomerName() { return customerName; }
 	public int getTableNumber() { return tableNumber; }
 	public OrderStatus getStatus() { return status; }
 	public PaymentStatus getPaymentStatus() { return paymentStatus; }

@@ -14,6 +14,8 @@ export interface UserSummary {
   displayName: string
   role: UserRole
   active: boolean
+  tableAccount?: boolean
+  tableNumber?: number | null
   createdAt: string
 }
 

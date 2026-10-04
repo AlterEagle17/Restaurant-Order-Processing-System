@@ -35,6 +35,12 @@ public class UserAccount {
 	@Column(nullable = false)
 	private boolean active = true;
 
+	@Column(name = "is_table_account", nullable = false)
+	private boolean tableAccount;
+
+	@Column(name = "table_number")
+	private Integer tableNumber;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt = Instant.now();
 
@@ -46,6 +52,12 @@ public class UserAccount {
 		this.displayName = displayName;
 		this.role = role;
 		this.active = true;
+	}
+
+	public UserAccount(String username, String passwordHash, String displayName, Role role, int tableNumber) {
+		this(username, passwordHash, displayName, role);
+		this.tableAccount = true;
+		this.tableNumber = tableNumber;
 	}
 
 	public void updateProfile(String username, String displayName) {
@@ -62,5 +74,7 @@ public class UserAccount {
 	public String getDisplayName() { return displayName; }
 	public Role getRole() { return role; }
 	public boolean isActive() { return active; }
+	public boolean isTableAccount() { return tableAccount; }
+	public Integer getTableNumber() { return tableNumber; }
 	public Instant getCreatedAt() { return createdAt; }
 }

@@ -1,6 +1,6 @@
-# Linden House Restaurant Operations
+# Spice Bite Restaurant Operations
 
-A restaurant order processing system with a React, TypeScript, Vite, and Tailwind frontend and a Java 21, Spring Boot, and PostgreSQL backend. The frontend provides development-only demo authentication and a separate API mode backed by JWT authentication and role-protected REST endpoints. Payments are simulated; no payment gateway is connected.
+A South Indian fast-food order processing system with a React, TypeScript, Vite, and Tailwind frontend and a Java 21, Spring Boot, and PostgreSQL backend. The frontend provides development-only demo authentication and a separate API mode backed by JWT authentication and role-protected REST endpoints. Customer table identities come from authenticated table accounts; payment amounts are INR and payments are simulated.
 
 ## Run locally
 

@@ -23,6 +23,6 @@ export function authenticateDemo(username: string, password: string): AuthUser |
     (candidate) => candidate.active && candidate.username.toLowerCase() === username.trim().toLowerCase() && candidate.password === password,
   )
   if (!account) return null
-  const { id, displayName, role } = account
-  return { id, username: account.username, displayName, role }
+  const { id, displayName, role, tableAccount, tableNumber } = account
+  return { id, username: account.username, displayName, role, tableAccount, tableNumber }
 }

@@ -11,22 +11,23 @@ describe('backend authentication API', () => {
       accessToken: 'signed-token',
       tokenType: 'Bearer' as const,
       expiresIn: 900000,
-      user: { id: 'user-id', username: 'manager', displayName: 'Jamie Chen', role: 'MANAGER' as const },
+      user: { id: 'user-id', username: 'table12', displayName: 'Table 12', role: 'CUSTOMER' as const,
+        tableAccount: true, tableNumber: 12 },
     }
     const post = vi.spyOn(api, 'post').mockResolvedValue({ data: payload } as AxiosResponse)
 
-    await expect(loginWithApi('manager', 'secret')).resolves.toEqual(payload)
-    expect(post).toHaveBeenCalledWith('/api/auth/login', { username: 'manager', password: 'secret' })
+    await expect(loginWithApi('table12', 'secret')).resolves.toEqual(payload)
+    expect(post).toHaveBeenCalledWith('/api/auth/login', { username: 'table12', password: 'secret' })
   })
 
   it('loads the server-authenticated profile and rejects inactive accounts', async () => {
     vi.spyOn(api, 'get').mockResolvedValue({ data: {
-      id: 'user-id', username: 'cashier', displayName: 'Taylor Brooks', role: 'CASHIER', active: true,
+      id: 'user-id', username: 'cashier', displayName: 'Kavitha Devi', role: 'CASHIER', active: true,
     } } as AxiosResponse)
     await expect(fetchCurrentUser()).resolves.toMatchObject({ username: 'cashier', role: 'CASHIER', active: true })
 
     vi.spyOn(api, 'get').mockResolvedValue({ data: {
-      id: 'user-id', username: 'cashier', displayName: 'Taylor Brooks', role: 'CASHIER', active: false,
+      id: 'user-id', username: 'cashier', displayName: 'Kavitha Devi', role: 'CASHIER', active: false,
     } } as AxiosResponse)
     await expect(fetchCurrentUser()).rejects.toThrow('This account is inactive.')
   })

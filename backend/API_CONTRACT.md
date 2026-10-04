@@ -62,7 +62,7 @@ Public registration is not provided. An optional one-time bootstrap admin may be
 `GET /api/menu/categories` and `GET /api/menu/items` are public reads and only expose active categories/items. Item listing accepts `categoryId`, `query`, `page`, and `size`. `GET /api/menu/items/{id}` returns one active item; inactive items return `404`.
 
 Category shape: `{ "id": "uuid", "name": "Mains", "description": "...", "active": true }`.
-Item shape: `{ "id": "uuid", "name": "...", "description": "...", "categoryId": "uuid", "categoryName": "Mains", "price": 24.00, "imageUrl": null, "active": true }`.
+Item shape: `{ "id": "uuid", "name": "...", "description": "...", "categoryId": "uuid", "categoryName": "Tiffin", "price": 90.00, "imageUrl": "...", "active": true }`. Seeded and displayed amounts are INR.
 
 ADMIN only: `POST /api/menu/categories` with `{name, description}`, `PUT /api/menu/categories/{id}` with `{name, description, active}`, `POST /api/menu/items` with `{name, description, categoryId, price, imageUrl}`, `PUT /api/menu/items/{id}` with the same fields, and `PATCH /api/menu/items/{id}/status` with `{active}`.
 
@@ -70,16 +70,18 @@ ADMIN catalog reads include inactive records for management: `GET /api/admin/men
 
 ## Orders
 
-- `POST /api/orders` — CUSTOMER. Request `{ "tableNumber": 4, "items": [{ "menuItemId": "uuid", "quantity": 2 }] }`. The server fetches current enabled menu prices and calculates all line totals. Response `201`:
+- `POST /api/orders` — table-account CUSTOMER only. Request `{ "customerName": "Ravi", "items": [{ "menuItemId": "uuid", "quantity": 2 }] }`. Do not send a table number; any extra client table value is ignored. The backend derives `tableNumber` from the authenticated account's immutable `table_number`, snapshots `customerName` on the order, fetches current enabled menu prices, and calculates all line totals. Response `201`:
 
 ```json
 {
   "id": "uuid", "orderNumber": "ORD-...", "customerId": "uuid", "customerName": "Guest Name",
   "tableNumber": 4, "status": "RECEIVED", "paymentStatus": "PENDING",
-  "items": [{ "menuItemId": "uuid", "name": "Dish", "quantity": 2, "unitPrice": 24.00, "lineTotal": 48.00 }],
-  "total": 48.00, "createdAt": "2026-09-27T12:00:00Z"
+  "items": [{ "menuItemId": "uuid", "name": "Masala Dosa", "quantity": 2, "unitPrice": 90.00, "lineTotal": 180.00 }],
+  "total": 180.00, "createdAt": "2026-09-27T12:00:00Z"
 }
 ```
+
+The `restaurant_users` table marks the twelve fixed `table01` through `table12` accounts with `is_table_account=true` and `table_number=1..12`. Their login/current-user profile includes `tableAccount` and `tableNumber`; the order's customer-name snapshot never changes the table account display name. Other CUSTOMER accounts cannot create table orders. Monetary columns remain decimal values; after V5 menu seed data and for all future operations, those values represent Indian Rupees (INR).
 
 - `GET /api/orders/my-orders` — CUSTOMER; only the authenticated customer's orders.
 - `GET /api/orders` — ADMIN/MANAGER/CASHIER/WAITER/KITCHEN_STAFF; supports `status`, `from`, `to`, `page`, `size`.

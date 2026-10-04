@@ -16,6 +16,8 @@ export interface DemoAccount {
   displayName: string
   role: UserRole
   active: boolean
+  tableAccount?: boolean
+  tableNumber?: number
 }
 
 export interface AuthUser {
@@ -23,6 +25,8 @@ export interface AuthUser {
   username: string
   displayName: string
   role: UserRole
+  tableAccount?: boolean
+  tableNumber?: number | null
 }
 
 export const ROLE_HOME: Record<UserRole, string> = {

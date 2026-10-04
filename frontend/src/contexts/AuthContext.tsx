@@ -34,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             (entry) => entry.id === candidate.id && entry.active && entry.role === candidate.role,
           )
           if (account) {
-            setUser({ id: account.id, username: account.username, displayName: account.displayName, role: account.role })
+            setUser({ id: account.id, username: account.username, displayName: account.displayName, role: account.role,
+              tableAccount: account.tableAccount ?? false, tableNumber: account.tableNumber ?? null })
           }
         } else {
           const token = sessionStorage.getItem(API_TOKEN_KEY)
@@ -70,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         username: account.username,
         displayName: account.displayName,
         role: account.role,
+        tableAccount: account.tableAccount ?? false,
+        tableNumber: account.tableNumber ?? null,
       }
       setUser(demoUser)
       sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(demoUser))

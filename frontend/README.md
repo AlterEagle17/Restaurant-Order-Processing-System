@@ -1,6 +1,8 @@
-# Linden House Restaurant Operations
+# Spice Bite Restaurant Operations
 
 React, TypeScript, Vite, Tailwind CSS, React Router, Axios, and Lucide React frontend. It supports a development-only demo mode and a real Spring Boot API mode. Payments remain simulated; no payment gateway is connected.
+
+Customer table devices use accounts `table01` through `table12`. The signed-in account supplies the table identity; customers enter a visit name before ordering. API orders use the database menu, and all displayed amounts are INR.
 
 ## Local development
 
@@ -15,7 +17,7 @@ API mode calls `/api/auth/login` and `/api/auth/me`, stores the access token in 
 
 ## Demo accounts
 
-Edit the strongly typed account list in `src/config/demoUsers.ts`. Each entry has `id`, `username`, `password`, `displayName`, `role`, and `active` fields. Add a unique username, use one of the `UserRole` values from `src/types/auth.ts`, and set `active: false` to disable an account. Removing an entry disables its login. Vite reloads the app after source changes. Admin account actions are in-memory for the current development session; update the config file for durable demo changes.
+Edit the strongly typed account list in `src/config/demoUsers.ts`. It includes employee demo accounts and the twelve table accounts. Each table account has a fixed `tableNumber`; its customer name is kept per browser session and copied to each order rather than changing the account profile. Add a unique username, use one of the `UserRole` values from `src/types/auth.ts`, and set `active: false` to disable an account. Vite reloads the app after source changes. Admin account actions are in-memory for the current development session; update the config file for durable demo changes.
 
 The login page lists active demo usernames and roles in development only. Selecting one fills its fields for convenience; passwords are not printed in the panel. Duplicate usernames are rejected by the admin editor and authentication uses case-insensitive username matching.
 

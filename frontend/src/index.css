@@ -3,22 +3,22 @@
 
 :root {
   font-family: 'DM Sans', sans-serif;
-  color: #26332f;
-  background: #f4f5f1;
+  color: #1d2020;
+  background: #f5f3ef;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --ink: #26332f;
-  --muted: #7f8982;
-  --green: #25483e;
-  --leaf: #527862;
-  --sage: #e7eee7;
-  --line: #e6e9e3;
+  --ink: #1d2020;
+  --muted: #77726c;
+  --green: #8f1722;
+  --leaf: #c91f2d;
+  --sage: #f8e8e8;
+  --line: #e4e0da;
   --paper: #ffffff;
-  --surface: #f4f5f1;
-  --coral: #be745e;
-  --gold: #b38c50;
-  --serif: 'Playfair Display', Georgia, serif;
+  --surface: #f5f3ef;
+  --coral: #c84938;
+  --gold: #a9751d;
+  --serif: 'DM Sans', sans-serif;
   font-optical-sizing: auto;
 }
 
@@ -28,8 +28,8 @@ button, input, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 a { color: inherit; text-decoration: none; }
-::selection { color: white; background: #527862; }
-:focus-visible { outline: 3px solid #9dbd9e; outline-offset: 2px; }
+::selection { color: white; background: #c91f2d; }
+:focus-visible { outline: 3px solid rgba(201,31,45,.45); outline-offset: 2px; }
 
 #root { min-height: 100vh; }
 .route-loading { display: grid; min-height: 100vh; place-items: center; color: var(--muted); }

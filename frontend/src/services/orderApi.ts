@@ -1,7 +1,7 @@
 import { api } from './api'
 import type { ApiOrderStatus, ApiPaymentMethod, OrderDto, PageResponse, PaymentDto } from '../types/api'
 
-export async function createOrder(payload: { tableNumber: number; items: { menuItemId: string; quantity: number }[] }) {
+export async function createOrder(payload: { customerName: string; items: { menuItemId: string; quantity: number }[] }) {
   return (await api.post<OrderDto>('/api/orders', payload)).data
 }
 

@@ -37,6 +37,9 @@ public class OrderService {
 	@Transactional
 	public OrderResponse create(CreateOrderRequest request, String username) {
 		UserAccount customer = requireUser(username);
+		if (!customer.isTableAccount() || customer.getTableNumber() == null) {
+			throw new BusinessRuleException("Orders can only be placed from an assigned table account");
+		}
 		Set<UUID> ids = new HashSet<>();
 		for (CreateOrderItemRequest item : request.items()) {
 			if (!ids.add(item.menuItemId())) throw new BusinessRuleException("An item may only appear once in an order");
@@ -45,7 +48,8 @@ public class OrderService {
 		if (menuItems.size() != ids.size()) throw new BusinessRuleException("One or more menu items are unavailable");
 		Map<UUID, MenuItem> itemsById = new HashMap<>();
 		menuItems.forEach(item -> itemsById.put(item.getId(), item));
-		RestaurantOrder order = new RestaurantOrder("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(), customer, request.tableNumber());
+		RestaurantOrder order = new RestaurantOrder("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+				customer, request.customerName().trim(), customer.getTableNumber());
 		for (CreateOrderItemRequest requested : request.items()) {
 			order.addItem(new OrderLine(itemsById.get(requested.menuItemId()), requested.quantity()));
 		}

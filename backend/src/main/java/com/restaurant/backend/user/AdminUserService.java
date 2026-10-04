@@ -39,6 +39,7 @@ public class AdminUserService {
 	@Transactional
 	public UserResponse update(UUID id, UpdateUserRequest request) {
 		UserAccount user = requireUser(id);
+		if (user.isTableAccount()) throw new ConflictException("Table account identity cannot be changed");
 		ensureUsernameAvailable(request.username(), id);
 		user.updateProfile(normalizeUsername(request.username()), request.displayName().trim());
 		return UserResponse.from(user);
@@ -58,6 +59,9 @@ public class AdminUserService {
 	@Transactional
 	public UserResponse updateRole(UUID id, Role role, String actorUsername) {
 		UserAccount user = requireUser(id);
+		if (user.isTableAccount() && role != Role.CUSTOMER) {
+			throw new ConflictException("Table accounts must keep the CUSTOMER role");
+		}
 		if (role != Role.ADMIN) {
 			preventSelfLockout(user, actorUsername);
 			preventLastAdministrator(user);

@@ -9,10 +9,10 @@ afterEach(() => vi.restoreAllMocks())
 describe('role dashboard API services', () => {
   it('submits customer order item ids and quantities without client prices or totals', async () => {
     const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 'order-id' } } as AxiosResponse)
-    await createOrder({ tableNumber: 7, items: [{ menuItemId: 'menu-id', quantity: 2 }] })
+    await createOrder({ customerName: 'Sabarish', items: [{ menuItemId: 'menu-id', quantity: 2 }] })
 
     expect(post).toHaveBeenCalledWith('/api/orders', {
-      tableNumber: 7,
+      customerName: 'Sabarish',
       items: [{ menuItemId: 'menu-id', quantity: 2 }],
     })
   })
