@@ -72,6 +72,15 @@ public class MenuService {
 	}
 
 	@Transactional
+	public void deleteCategory(UUID id) {
+		MenuCategory category = requireCategory(id);
+		if (itemRepository.existsByCategoryId(id)) {
+			throw new ConflictException("Cannot delete this category while menu items still belong to it. Move or remove the items first.");
+		}
+		categoryRepository.delete(category);
+	}
+
+	@Transactional
 	public MenuItemResponse createItem(MenuItemRequest request) {
 		MenuCategory category = requireCategory(request.categoryId());
 		if (!category.isActive()) throw new BusinessRuleException("Cannot add an item to an inactive category");

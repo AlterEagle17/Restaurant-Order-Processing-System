@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,6 +40,23 @@ public class AdminMenuController {
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "100") int size) {
 		Page<MenuItemResponse> result = menuService.allItemsForAdmin(categoryId, query, active, page, size);
 		return PageResponse.from(result, item -> item);
+	}
+
+	@PostMapping("/categories")
+	public ResponseEntity<MenuCategoryResponse> createCategory(@Valid @RequestBody MenuCategoryRequest request) {
+		MenuCategoryResponse category = menuService.createCategory(request);
+		return ResponseEntity.created(java.net.URI.create("/api/admin/menu/categories/" + category.id())).body(category);
+	}
+
+	@PutMapping("/categories/{id}")
+	public MenuCategoryResponse updateCategory(@PathVariable UUID id, @Valid @RequestBody MenuCategoryUpdateRequest request) {
+		return menuService.updateCategory(id, request);
+	}
+
+	@DeleteMapping("/categories/{id}")
+	public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
+		menuService.deleteCategory(id);
+		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/items")

@@ -2,6 +2,7 @@ package com.restaurant.backend;
 
 import static org.hamcrest.Matchers.blankOrNullString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -214,6 +215,34 @@ class RestaurantApiIntegrationTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content[0].name").value("Masala Dosa"))
 				.andExpect(jsonPath("$.content[0].price").value(95.0));
+	}
+
+	@Test
+	void adminCanCreateUpdateAndSafelyDeleteCategories() throws Exception {
+		createUser("admin", Role.ADMIN);
+		String adminToken = login("admin");
+		MvcResult categoryResult = mockMvc.perform(post("/api/admin/menu/categories")
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Breakfast\",\"description\":\"Morning favorites\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.name").value("Breakfast"))
+				.andReturn();
+		String categoryId = readField(categoryResult, "id");
+		mockMvc.perform(put("/api/admin/menu/categories/{id}", categoryId)
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"South Indian Breakfast\",\"description\":\"Fresh breakfast\",\"active\":true}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.name").value("South Indian Breakfast"));
+		MenuCategory category = categoryRepository.findById(java.util.UUID.fromString(categoryId)).orElseThrow();
+		itemRepository.save(new MenuItem("Idli", "Soft rice cakes", category, new BigDecimal("40.00"), "https://example.com/idli.jpg"));
+		mockMvc.perform(delete("/api/admin/menu/categories/{id}", categoryId)
+				.header("Authorization", bearer(adminToken)))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error").value("CONFLICT"));
+		itemRepository.deleteAll();
+		mockMvc.perform(delete("/api/admin/menu/categories/{id}", categoryId)
+				.header("Authorization", bearer(adminToken)))
+				.andExpect(status().isNoContent());
 	}
 
 	@Test

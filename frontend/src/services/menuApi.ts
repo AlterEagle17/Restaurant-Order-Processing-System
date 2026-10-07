@@ -21,6 +21,10 @@ export async function updateMenuCategory(id: string, payload: { name: string; de
   return (await api.put<MenuCategoryDto>(`/api/menu/categories/${id}`, payload)).data
 }
 
+export async function deleteMenuCategory(id: string) {
+  await api.delete(`/api/menu/categories/${id}`)
+}
+
 export async function createMenuItem(payload: { name: string; description?: string | null; categoryId: string; price: number; imageUrl?: string | null }) {
   return (await api.post<MenuItemDto>('/api/menu/items', payload)).data
 }

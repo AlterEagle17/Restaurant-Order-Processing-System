@@ -14,6 +14,7 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, UUID> {
 	Page<MenuItem> findByCategoryIdAndActiveTrue(UUID categoryId, Pageable pageable);
 	Page<MenuItem> findByNameContainingIgnoreCaseAndActiveTrue(String query, Pageable pageable);
 	Page<MenuItem> findByCategoryIdAndNameContainingIgnoreCaseAndActiveTrue(UUID categoryId, String query, Pageable pageable);
+	boolean existsByCategoryId(UUID categoryId);
 	boolean existsByCategoryIdAndActiveTrue(UUID categoryId);
 	@Query("select item from MenuItem item where item.active = true and item.category.active = true and item.id in :ids")
 	List<MenuItem> findAllByActiveTrueAndIdIn(@Param("ids") List<UUID> ids);

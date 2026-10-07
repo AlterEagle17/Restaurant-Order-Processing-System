@@ -12,7 +12,7 @@ import { CustomerOrderingDashboard } from './CustomerOrderingDashboard'
 import { ROLE_HOME, USER_ROLES, type DemoAccount, type UserRole } from './types/auth'
 import type { ManagerDashboardDto, MenuCategoryDto, MenuItemDto, OrderDto, PaymentDto, RevenuePointDto, UserSummary } from './types/api'
 import { createOrder, listKitchenOrders, listMyOrders, listOrders, listPendingCashierOrders, listWaiterOrders, recordSimulatedPayment, serveOrder, updateKitchenOrder } from './services/orderApi'
-import { createMenuCategory, createMenuItem, listAdminMenuCategories, listAdminMenuItems, listMenuCategories, listMenuItems, setMenuItemActive, updateMenuCategory, updateMenuItem } from './services/menuApi'
+import { createMenuCategory, createMenuItem, deleteMenuCategory, listAdminMenuCategories, listAdminMenuItems, listMenuCategories, listMenuItems, setMenuItemActive, updateMenuCategory, updateMenuItem } from './services/menuApi'
 import { createUser, listUsers, resetUserPassword, setUserActive, setUserRole, updateUser } from './services/adminApi'
 import { getManagerDashboard, getManagerRevenue, listManagerOrders } from './services/managerApi'
 import './App.css'
@@ -153,7 +153,9 @@ function AdminApiDashboard() {
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null)
   const [userFormOpen, setUserFormOpen] = useState(false)
   const [userDraft, setUserDraft] = useState({ username: '', displayName: '', password: '', role: 'CUSTOMER' as UserRole })
-  const [newCategory, setNewCategory] = useState('')
+  const [categoryFormOpen, setCategoryFormOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<MenuCategoryDto | null>(null)
+  const [categoryDraft, setCategoryDraft] = useState({ name: '', description: '' })
   const [editingItem, setEditingItem] = useState<MenuItemDto | null>(null)
   const [itemFormOpen, setItemFormOpen] = useState(false)
   const [itemDraft, setItemDraft] = useState({ name: '', description: '', categoryId: '', price: '', imageUrl: '' })
@@ -262,27 +264,47 @@ function AdminApiDashboard() {
     }
   }
 
-  async function addCategory() {
-    if (!newCategory.trim()) return
-    try {
-      await createMenuCategory({ name: newCategory.trim() })
-      setNewCategory('')
-      notify('Menu category created.')
-      await refreshCatalog()
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not create category.')
-    }
+  function beginCreateCategory() {
+    setEditingCategory(null)
+    setCategoryDraft({ name: '', description: '' })
+    setCategoryFormOpen(true)
   }
 
-  async function editCategory(category: MenuCategoryDto) {
-    const name = window.prompt('Category name', category.name)
-    if (!name?.trim()) return
+  function beginEditCategory(category: MenuCategoryDto) {
+    setEditingCategory(category)
+    setCategoryDraft({ name: category.name, description: category.description ?? '' })
+    setCategoryFormOpen(true)
+  }
+
+  async function saveCategory(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const trimmedName = categoryDraft.name.trim()
+    if (!trimmedName) {
+      setError('Please enter a category name.')
+      return
+    }
+    const duplicate = categories.some((category) => category.name.trim().toLowerCase() === trimmedName.toLowerCase() && (!editingCategory || category.id !== editingCategory.id))
+    if (duplicate) {
+      setError('A category with that name already exists.')
+      return
+    }
+    const payload = {
+      name: trimmedName,
+      description: categoryDraft.description.trim() || undefined,
+      active: editingCategory ? editingCategory.active : true,
+    }
     try {
-      await updateMenuCategory(category.id, { name: name.trim(), description: category.description, active: category.active })
-      notify('Menu category updated.')
+      if (editingCategory) {
+        await updateMenuCategory(editingCategory.id, payload)
+        notify('Menu category updated.')
+      } else {
+        await createMenuCategory({ name: payload.name, description: payload.description })
+        notify('Menu category created.')
+      }
+      setCategoryFormOpen(false)
       await refreshCatalog()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not update category.')
+      setError(requestError instanceof Error ? requestError.message : 'Could not save this category.')
     }
   }
 
@@ -294,6 +316,22 @@ function AdminApiDashboard() {
       await refreshCatalog()
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not update category.')
+    }
+  }
+
+  async function removeCategory(category: MenuCategoryDto) {
+    const itemCount = items.filter((item) => item.categoryId === category.id).length
+    if (itemCount > 0) {
+      setError('This category is still in use by menu items. Move or remove those items before deleting the category.')
+      return
+    }
+    if (!window.confirm(`Delete the ${category.name} category?`)) return
+    try {
+      await deleteMenuCategory(category.id)
+      notify('Category deleted.')
+      await refreshCatalog()
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not delete category.')
     }
   }
 
@@ -352,7 +390,7 @@ function AdminApiDashboard() {
 
   return <><div className="section-tabs">{(['overview', 'users', 'menu'] as const).map((item) => <button className={section === item ? 'section-tab selected' : 'section-tab'} key={item} onClick={() => { setSection(item); setError('') }}>{item === 'users' ? 'User management' : item === 'menu' ? 'Menu & categories' : 'Overview'}</button>)}</div>{error && <p role="alert" className="form-error">{error}</p>}{section === 'overview' && <><PageHeading eyebrow="SYSTEM OVERVIEW · LIVE DATA" title="Restaurant overview" description="Current accounts, orders, and active menu items." action={<button className="button-secondary" onClick={() => setSection('users')}><Users size={16} /> Manage team</button>} />{overviewLoading || userLoading || catalogLoading ? <div className="empty-state">Loading system overview...</div> : <><div className="metric-grid"><MetricCard label="Team members" value={String(users.length).padStart(2, '0')} detail={`${users.filter((entry) => entry.active).length} active`} icon={Users} /><MetricCard label="Orders" value={String(orderCount)} detail="Total orders" icon={ShoppingBag} accent="coral" /><MetricCard label="Menu items" value={String(items.length).padStart(2, '0')} detail={`Across ${categories.length} categories`} icon={Utensils} accent="gold" /><MetricCard label="System health" value="Operational" detail="API connected" icon={ShieldCheck} accent="green" /></div><div className="content-grid admin-overview-grid"><section className="panel"><div className="panel-header"><div><p className="eyebrow">ACCESS CONTROL</p><h2>Team members</h2></div><button className="text-button" onClick={() => setSection('users')}>View team <ArrowRight size={14} /></button></div><div className="table-scroll"><table><thead><tr><th>TEAM MEMBER</th><th>ROLE</th><th>STATUS</th></tr></thead><tbody>{users.slice(0, 5).map((account) => <tr key={account.id}><td><strong>{account.displayName}</strong><small>{account.username}</small></td><td>{roleNames[account.role]}</td><td><StatusBadge status={account.active ? 'ACTIVE' : 'INACTIVE'} /></td></tr>)}</tbody></table></div></section><section className="panel system-panel"><div className="panel-header"><div><p className="eyebrow">CATALOG</p><h2>Menu availability</h2></div><span className="system-pulse" /></div><div className="health-row"><span className="health-icon gold"><Utensils size={17} /></span><span><strong>{items.length} active items</strong><small>{categories.length} active categories</small></span><StatusBadge status="ACTIVE" /></div><div className="panel-bottom-note"><span className="online-dot" /> Live backend data</div></section></div></>}</>}
     {section === 'users' && <><PageHeading eyebrow="ADMINISTRATION · ACCESS CONTROL" title="Team members" description="Manage real backend accounts, roles, and access." action={<button className="button-primary" onClick={beginCreateUser}><Plus size={16} /> Add team member</button>} /><section className="panel data-panel"><div className="table-toolbar"><div className="search-field"><Search size={16} /><input placeholder="Search team members" value={query} onChange={(event) => { setQuery(event.target.value); setUserLoading(true) }} /></div><span className="toolbar-count">{users.length} ACCOUNTS</span></div>{userLoading ? <div className="empty-state">Loading team members...</div> : <div className="table-scroll"><table><thead><tr><th>TEAM MEMBER</th><th>USERNAME</th><th>ROLE</th><th>STATUS</th><th className="align-right">ACTIONS</th></tr></thead><tbody>{users.map((account) => <tr key={account.id}><td><div className="table-person"><span className="table-avatar">{account.displayName.split(' ').map((part) => part[0]).join('')}</span><strong>{account.displayName}</strong></div></td><td className="muted-cell">{account.username}</td><td><span className="role-chip">{roleNames[account.role]}</span></td><td><StatusBadge status={account.active ? 'ACTIVE' : 'INACTIVE'} /></td><td><div className="row-actions"><button className="text-button compact" onClick={() => beginEditUser(account)}>Edit</button><button className="text-button compact" onClick={() => void toggleUser(account)}>{account.active ? 'Deactivate' : 'Activate'}</button></div></td></tr>)}</tbody></table>{users.length === 0 && <div className="empty-state"><Users size={22} /><strong>No team members found</strong><span>Try another search term.</span></div>}</div>}</section></>}
-    {section === 'menu' && <><PageHeading eyebrow="ADMINISTRATION · CATALOG" title="Menu & categories" description="Manage the live customer catalog." action={<button className="button-primary" onClick={beginCreateItem} disabled={!categories.some((category) => category.active)}><Plus size={16} /> Add menu item</button>} /><div className="metric-grid category-grid">{categories.map((category, index) => <div className="category-tile" key={category.id}><span className="category-number">{String(index + 1).padStart(2, '0')}</span><strong>{category.name}</strong><small>{items.filter((item) => item.categoryId === category.id).length} items · {category.active ? 'active' : 'inactive'}</small><div className="row-actions"><button className="text-button compact" onClick={() => void editCategory(category)}>Rename</button><button className="text-button compact" onClick={() => void toggleCategory(category)}>{category.active ? 'Disable' : 'Enable'}</button></div></div>)}</div><section className="panel data-panel"><div className="table-toolbar"><div className="search-field"><Search size={16} /><input placeholder="Search menu items" value={query} onChange={(event) => setQuery(event.target.value)} /></div><div className="inline-add"><input aria-label="New menu category name" placeholder="New category" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} /><button className="icon-button" title="Add category" onClick={() => void addCategory()}><Plus size={17} /></button></div></div>{catalogLoading ? <div className="empty-state">Loading menu catalog...</div> : <div className="table-scroll"><table><thead><tr><th>ITEM</th><th>CATEGORY</th><th>PRICE</th><th>AVAILABILITY</th><th></th></tr></thead><tbody>{items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).map((item) => <tr key={item.id}><td><strong>{item.name}</strong><small>{item.description}</small></td><td>{item.categoryName}</td><td className="currency">{formatINR(item.price)}</td><td><StatusBadge status={item.active ? 'ACTIVE' : 'INACTIVE'} /></td><td><div className="row-actions"><button className="text-button compact" onClick={() => beginEditItem(item)}>Edit</button><button className="text-button compact" onClick={() => void toggleItem(item)}>{item.active ? 'Disable' : 'Enable'}</button></div></td></tr>)}</tbody></table>{items.length === 0 && <div className="empty-state"><Utensils size={22} /><strong>No menu items</strong></div>}</div>}</section></>}
+    {section === 'menu' && <><PageHeading eyebrow="ADMINISTRATION · CATALOG" title="Menu & categories" description="Manage the live customer catalog." action={<button className="button-primary" onClick={beginCreateItem} disabled={!categories.some((category) => category.active)}><Plus size={16} /> Add menu item</button>} /><div className="panel"><div className="panel-header"><div><p className="eyebrow">CATEGORIES</p><h2>Menu categories</h2></div><button className="button-secondary" onClick={beginCreateCategory}><Plus size={16} /> Add Category</button></div><div className="metric-grid category-grid">{categories.map((category, index) => <div className="category-tile" key={category.id}><span className="category-number">{String(index + 1).padStart(2, '0')}</span><strong>{category.name}</strong><small>{items.filter((item) => item.categoryId === category.id).length} items · {category.active ? 'active' : 'inactive'}</small><div className="row-actions"><button className="text-button compact" onClick={() => beginEditCategory(category)}>Edit</button><button className="text-button compact" onClick={() => void toggleCategory(category)}>{category.active ? 'Disable' : 'Enable'}</button><button className="text-button compact danger-text" onClick={() => void removeCategory(category)}>Delete</button></div></div>)}</div></div><section className="panel data-panel"><div className="table-toolbar"><div className="search-field"><Search size={16} /><input placeholder="Search menu items" value={query} onChange={(event) => setQuery(event.target.value)} /></div></div>{catalogLoading ? <div className="empty-state">Loading menu catalog...</div> : <div className="table-scroll"><table><thead><tr><th>ITEM</th><th>CATEGORY</th><th>PRICE</th><th>AVAILABILITY</th><th>ACTIONS</th></tr></thead><tbody>{items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).map((item) => <tr key={item.id}><td><strong>{item.name}</strong><small>{item.description}</small></td><td>{item.categoryName}</td><td className="currency">{formatINR(item.price)}</td><td><StatusBadge status={item.active ? 'ACTIVE' : 'INACTIVE'} /></td><td><div className="row-actions"><button className="text-button compact" onClick={() => beginEditItem(item)}>Edit</button><button className="text-button compact" onClick={() => void toggleItem(item)}>{item.active ? 'Disable' : 'Enable'}</button></div></td></tr>)}</tbody></table>{items.length === 0 && <div className="empty-state"><Utensils size={22} /><strong>No menu items</strong></div>}</div>}</section>{categoryFormOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCategoryFormOpen(false) }}><form className="modal" onSubmit={(event) => void saveCategory(event)}><div className="modal-heading"><div><p className="eyebrow">CATEGORIES</p><h2>{editingCategory ? 'Edit category' : 'Add category'}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={() => setCategoryFormOpen(false)}><X size={18} /></button></div><label>Category name<input required maxLength={120} value={categoryDraft.name} onChange={(event) => setCategoryDraft({ ...categoryDraft, name: event.target.value })} /></label><label>Description (optional)<input maxLength={500} value={categoryDraft.description} onChange={(event) => setCategoryDraft({ ...categoryDraft, description: event.target.value })} /></label><div className="modal-actions"><button type="button" className="button-secondary" onClick={() => setCategoryFormOpen(false)}>Cancel</button><button type="submit" className="button-primary">{editingCategory ? 'Save changes' : 'Add Category'}</button></div></form></div> }</>}
     {userFormOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setUserFormOpen(false) }}><form className="modal" onSubmit={(event) => void saveUser(event)}><div className="modal-heading"><div><p className="eyebrow">TEAM ACCESS</p><h2>{editingUser ? 'Edit team member' : 'Add team member'}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={() => setUserFormOpen(false)}><X size={18} /></button></div><label>Display name<input required value={userDraft.displayName} onChange={(event) => setUserDraft({ ...userDraft, displayName: event.target.value })} /></label><label>Username<input required value={userDraft.username} onChange={(event) => setUserDraft({ ...userDraft, username: event.target.value })} /></label><label>{editingUser ? 'Reset password (optional)' : 'Temporary password'}<input required={!editingUser} minLength={12} maxLength={72} type="password" value={userDraft.password} onChange={(event) => setUserDraft({ ...userDraft, password: event.target.value })} /></label><label>Role<select value={userDraft.role} onChange={(event) => setUserDraft({ ...userDraft, role: event.target.value as UserRole })}>{USER_ROLES.map((role) => <option key={role} value={role}>{roleNames[role]}</option>)}</select></label><p className="modal-note">The backend stores only a BCrypt password hash. Passwords are never returned by the API.</p><div className="modal-actions"><button type="button" className="button-secondary" onClick={() => setUserFormOpen(false)}>Cancel</button><button type="submit" className="button-primary">{editingUser ? 'Save changes' : 'Create account'}</button></div></form></div>}
     {itemFormOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setItemFormOpen(false) }}><form className="modal" onSubmit={(event) => void saveItem(event)}><div className="modal-heading"><div><p className="eyebrow">MENU CATALOG</p><h2>{editingItem ? 'Edit menu item' : 'Add menu item'}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={() => setItemFormOpen(false)}><X size={18} /></button></div><label>Item name<input required maxLength={120} value={itemDraft.name} onChange={(event) => setItemDraft({ ...itemDraft, name: event.target.value })} /></label><label>Description<input maxLength={1000} value={itemDraft.description} onChange={(event) => setItemDraft({ ...itemDraft, description: event.target.value })} /></label><label>Category<select required value={itemDraft.categoryId} onChange={(event) => setItemDraft({ ...itemDraft, categoryId: event.target.value })}>{categories.filter((category) => category.active).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><label>Price<input required min="0.01" step="0.01" type="number" value={itemDraft.price} onChange={(event) => setItemDraft({ ...itemDraft, price: event.target.value })} /></label><label>Image URL<input maxLength={1000} value={itemDraft.imageUrl} onChange={(event) => setItemDraft({ ...itemDraft, imageUrl: event.target.value })} /></label>{itemDraft.imageUrl.trim() ? <div className="image-preview-panel"><img src={itemDraft.imageUrl.trim()} alt={itemDraft.name || 'Menu item'} className="item-image-preview" onError={(event) => { event.currentTarget.style.display = 'none' }} /><span className="muted-cell">Preview</span></div> : <div className="image-preview-panel empty"><span className="muted-cell">No image yet — a neutral placeholder will be used in customer menus.</span></div>}<div className="modal-actions"><button type="button" className="button-secondary" onClick={() => setItemFormOpen(false)}>Cancel</button><button type="submit" className="button-primary">{editingItem ? 'Save changes' : 'Create item'}</button></div></form></div>}
   </>
