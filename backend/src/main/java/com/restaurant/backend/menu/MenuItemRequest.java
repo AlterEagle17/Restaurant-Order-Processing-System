@@ -14,4 +14,4 @@ public record MenuItemRequest(
 		@Size(max = 1000) String description,
 		@NotNull UUID categoryId,
 		@NotNull @DecimalMin("0.01") @Digits(integer = 10, fraction = 2) BigDecimal price,
-		@Size(max = 1000) String imageUrl) { }
+		@Size(max = 1000) @jakarta.validation.constraints.Pattern(regexp = "^(|https?://.+)$") String imageUrl) { }

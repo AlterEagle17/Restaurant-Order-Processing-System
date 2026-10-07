@@ -1,5 +1,7 @@
 package com.restaurant.backend.menu;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.UUID;
 
@@ -81,7 +83,7 @@ public class MenuService {
 		MenuItem item = itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 		MenuCategory category = requireCategory(request.categoryId());
 		if (!category.isActive()) throw new BusinessRuleException("Cannot use an inactive category");
-		item.update(request.name().trim(), request.description(), category, request.price(), request.imageUrl());
+		item.update(request.name().trim(), normalizeDescription(request.description()), category, request.price(), normalizeImageUrl(request.imageUrl()));
 		return MenuItemResponse.from(item);
 	}
 
@@ -94,7 +96,29 @@ public class MenuService {
 	}
 
 	private MenuItem toItem(MenuItemRequest request, MenuCategory category) {
-		return new MenuItem(request.name().trim(), request.description(), category, request.price(), request.imageUrl());
+		return new MenuItem(request.name().trim(), normalizeDescription(request.description()), category, request.price(), normalizeImageUrl(request.imageUrl()));
+	}
+
+	private String normalizeDescription(String description) {
+		if (description == null) return null;
+		String value = description.trim();
+		return value.isEmpty() ? null : value;
+	}
+
+	private String normalizeImageUrl(String imageUrl) {
+		if (imageUrl == null) return null;
+		String value = imageUrl.trim();
+		if (value.isEmpty()) return null;
+		try {
+			URI uri = new URI(value);
+			String scheme = uri.getScheme();
+			if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+				throw new BusinessRuleException("Image URL must use http or https");
+			}
+		} catch (URISyntaxException ex) {
+			throw new BusinessRuleException("Image URL must be a valid HTTP or HTTPS link");
+		}
+		return value;
 	}
 
 	private MenuCategory requireCategory(UUID id) {

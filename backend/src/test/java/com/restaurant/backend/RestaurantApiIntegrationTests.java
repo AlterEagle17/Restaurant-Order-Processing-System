@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -183,6 +184,36 @@ class RestaurantApiIntegrationTests {
 				.header("Authorization", bearer(managerToken)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.totalRevenue").value(0.0));
+	}
+
+	@Test
+	void adminCanCreateAndUpdateMenuItemsFromAdminEndpoints() throws Exception {
+		createUser("admin", Role.ADMIN);
+		String adminToken = login("admin");
+		MenuCategory category = categoryRepository.save(new MenuCategory("Tiffin", "South Indian breakfast"));
+
+		MvcResult created = mockMvc.perform(post("/api/admin/menu/items")
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Masala Dosa\",\"description\":\"Crispy dosa with potato masala\",\"categoryId\":\"" + category.getId() + "\",\"price\":90,\"imageUrl\":\"https://example.com/masala-dosa.jpg\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.name").value("Masala Dosa"))
+				.andExpect(jsonPath("$.description").value("Crispy dosa with potato masala"))
+				.andExpect(jsonPath("$.price").value(90.0))
+				.andExpect(jsonPath("$.imageUrl").value("https://example.com/masala-dosa.jpg"))
+				.andReturn();
+		String createdId = readField(created, "id");
+
+		mockMvc.perform(put("/api/admin/menu/items/{id}", createdId)
+				.header("Authorization", bearer(adminToken)).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Masala Dosa\",\"description\":\"Updated crispy dosa\",\"categoryId\":\"" + category.getId() + "\",\"price\":95,\"imageUrl\":\"https://example.com/masala-dosa-updated.jpg\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.price").value(95.0))
+				.andExpect(jsonPath("$.imageUrl").value("https://example.com/masala-dosa-updated.jpg"));
+
+		mockMvc.perform(get("/api/menu/items").param("categoryId", category.getId().toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].name").value("Masala Dosa"))
+				.andExpect(jsonPath("$.content[0].price").value(95.0));
 	}
 
 	@Test

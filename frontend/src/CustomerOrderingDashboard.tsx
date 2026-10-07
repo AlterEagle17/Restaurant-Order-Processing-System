@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Check, Clock3, Minus, Plus, Search, ShoppingBag } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from './contexts/useAuth'
 import { createOrder, listMyOrders } from './services/orderApi'
 import { listMenuCategories, listMenuItems } from './services/menuApi'
@@ -25,14 +26,16 @@ export type CustomerDemoOrder = {
   time: string
 }
 
+const neutralMenuPlaceholder = 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=85'
+
 const demoMenu: CustomerMenuItem[] = [
-  { id: 'demo-idli', name: 'Idli', categoryName: 'Tiffin', description: 'Soft steamed rice cakes with sambar and chutney', price: 40, imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=900&q=85' },
-  { id: 'demo-vada', name: 'Vada', categoryName: 'Tiffin', description: 'Crisp medu vada served with chutneys', price: 45, imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=900&q=85' },
-  { id: 'demo-masala-dosa', name: 'Masala Dosa', categoryName: 'Tiffin', description: 'Golden dosa with potato masala, sambar and chutney', price: 90, imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=900&q=85' },
-  { id: 'demo-samosa', name: 'Samosa', categoryName: 'Snacks', description: 'Crisp pastry filled with spiced potatoes', price: 30, imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85' },
-  { id: 'demo-paneer-roll', name: 'Paneer Roll', categoryName: 'Snacks', description: 'Spiced paneer wrapped with onions and chutney', price: 90, imageUrl: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=900&q=85' },
+  { id: 'demo-idli', name: 'Idli', categoryName: 'Tiffin', description: 'Soft steamed rice cakes with sambar and chutney', price: 40, imageUrl: 'https://images.unsplash.com/photo-1604908556858-0b62d7f5a6b8?auto=format&fit=crop&w=900&q=85' },
+  { id: 'demo-vada', name: 'Vada', categoryName: 'Tiffin', description: 'Crisp medu vada served with chutneys', price: 45, imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85' },
+  { id: 'demo-masala-dosa', name: 'Masala Dosa', categoryName: 'Tiffin', description: 'Golden dosa with potato masala, sambar and chutney', price: 90, imageUrl: 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=900&q=85' },
+  { id: 'demo-samosa', name: 'Samosa', categoryName: 'Snacks', description: 'Crisp pastry filled with spiced potatoes', price: 30, imageUrl: 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=900&q=85' },
+  { id: 'demo-paneer-roll', name: 'Paneer Roll', categoryName: 'Snacks', description: 'Spiced paneer wrapped with onions and chutney', price: 90, imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=85' },
   { id: 'demo-meals', name: 'South Indian Meals', categoryName: 'Meals', description: 'Rice, sambar, rasam, poriyal, curd and pickle', price: 140, imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85' },
-  { id: 'demo-biryani', name: 'Chicken Biryani', categoryName: 'Biryani', description: 'Aromatic basmati rice with masala chicken', price: 180, imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85' },
+  { id: 'demo-biryani', name: 'Chicken Biryani', categoryName: 'Biryani', description: 'Aromatic basmati rice with masala chicken', price: 180, imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=900&q=85' },
   { id: 'demo-chicken-65', name: 'Chicken 65', categoryName: 'Chicken', description: 'Crisp, spicy chicken bites with curry leaves', price: 150, imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=900&q=85' },
   { id: 'demo-filter-coffee', name: 'Filter Coffee', categoryName: 'Drinks', description: 'Fresh decoction with hot milk', price: 35, imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=85' },
   { id: 'demo-gulab-jamun', name: 'Gulab Jamun', categoryName: 'Desserts', description: 'Warm milk-solid dumplings in cardamom syrup', price: 50, imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85' },
@@ -55,7 +58,8 @@ export function CustomerOrderingDashboard({
   onDemoOrder: (order: CustomerDemoOrder) => void
   notify: (message: string) => void
 }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const tableNumber = user?.tableAccount ? user.tableNumber : undefined
   const nameKey = `spice-bite-guest-${user?.username ?? 'table'}`
   const [guestName, setGuestName] = useState(() => sessionStorage.getItem(nameKey) ?? '')
@@ -166,6 +170,12 @@ export function CustomerOrderingDashboard({
     setCart({})
   }
 
+  function handleLogout() {
+    sessionStorage.removeItem(nameKey)
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   async function placeOrder() {
     if (!tableNumber || !guestName) {
       setError('This device is not linked to an active table account.')
@@ -235,7 +245,7 @@ export function CustomerOrderingDashboard({
   return <section className="customer-experience">
     <header className="customer-header">
       <div><span className="brand-wordmark compact-wordmark">SPICE <b>BITE</b></span><span className="customer-tagline">FRESH. FAST. SOUTH INDIAN.</span></div>
-      <div className="customer-welcome-meta"><span className="table-label">TABLE {String(tableNumber ?? 0).padStart(2, '0')}</span><strong>Welcome, {guestName}</strong><button className="new-guest-button" onClick={startNewGuest}>NEW GUEST</button></div>
+      <div className="customer-welcome-meta"><span className="table-label">TABLE {String(tableNumber ?? 0).padStart(2, '0')}</span><strong>Welcome, {guestName}</strong><div className="customer-header-actions"><button className="new-guest-button" onClick={startNewGuest}>NEW GUEST</button><button className="new-guest-button logout" onClick={handleLogout}>LOG OUT</button></div></div>
     </header>
 
     {lastOrder && <section className="order-confirmation" aria-live="polite">
@@ -256,7 +266,7 @@ export function CustomerOrderingDashboard({
       <main className="customer-menu-area">
         <div className="customer-menu-tools"><label className="customer-search"><Search size={19} /><input aria-label="Search menu" placeholder="Search food" value={search} onChange={(event) => { setSearch(event.target.value); setMenuLoading(apiMode) }} /></label><nav className="customer-categories" aria-label="Menu categories">{categoryNames.map((name) => <button key={name} className={category === name ? 'active' : ''} onClick={() => { setCategory(name); setMenuLoading(apiMode) }}>{name}</button>)}</nav></div>
         {menuLoading ? <p className="customer-empty">Loading menu...</p> : <div className="customer-food-grid">{visibleItems.map((item) => <article className="customer-food-card" key={item.id}>
-          <img src={item.imageUrl ?? 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=900&q=85'} alt={item.name} loading="lazy" />
+          <img src={item.imageUrl?.trim() || neutralMenuPlaceholder} alt={item.name} loading="lazy" />
           <div className="food-card-body"><span className="food-category">{item.categoryName}</span><h2>{item.name}</h2><p>{item.description}</p><div className="food-card-footer"><strong>{formatINR(item.price)}</strong>{cart[item.id] ? <div className="customer-quantity"><button aria-label={`Remove one ${item.name}`} onClick={() => adjust(item.id, -1)}><Minus size={18} /></button><span>{cart[item.id]}</span><button aria-label={`Add one ${item.name}`} onClick={() => adjust(item.id, 1)}><Plus size={18} /></button></div> : <button className="food-add-button" onClick={() => adjust(item.id, 1)}>ADD <Plus size={17} /></button>}</div></div>
         </article>)}</div>}
       </main>

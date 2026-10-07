@@ -90,10 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    const guestSessionKey = user ? `spice-bite-guest-${user.username ?? 'table'}` : null
     setUser(null)
     setApiToken(null)
     sessionStorage.removeItem(DEMO_SESSION_KEY)
     sessionStorage.removeItem(API_TOKEN_KEY)
+    if (guestSessionKey) sessionStorage.removeItem(guestSessionKey)
   }
 
   function updateAccounts(nextAccounts: DemoAccount[]) {
